@@ -1,5 +1,13 @@
 #include "AllHead.h"
 
+#if defined(BIKING) && BIKING
+#include "l298n.h"
+extern int RUNNING;
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+#else
+pid_struct	line_pid;
+#endif
+#endif
 u32 timerCounter = 0;
 
 /*由直线循迹发出的全局命令*/
@@ -24,8 +32,16 @@ int main(void)
 		uart_init(115200);	 	//串口初始化为 115200	
 		LED_Init();		  			//初始化与LED连接的硬件接口
 		KEY_Init();					//初始化按键
+#if defined(BIKING) && BIKING
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+#else
+	PID_init(&line_pid,3,0,0);
+#endif
+#else
 	
 	  TIM3_Int_Init(TIMERUNIT,7199);//进入定时器中断，增加计数值，后续的值可以根据这个定时器做定时采集发送
+#endif
+	  TIM6_Int_Init(10000,7199);	//10Khz计数频率,1秒钟中断  printf N fps message in timer.c  N frames every second  result:15fps
 	
 		LCD_Init();			   		//初始化LCD  
 		POINT_COLOR=RED;			//设置字体为红色 
@@ -55,38 +71,36 @@ int main(void)
 		LCD_Clear(BLACK); 
 		
 		
-	  OLED_Init();//OLED初始化和提示信息显示
+	//   OLED_Init();//OLED初始化和提示信息显示
 		
-		OLED_Display_On();
-    myOledShowInfo(0,0,"Hello world!",CLEANOLED);
-		OLED_Refresh_Gram();
+		// OLED_Display_On();
+    // myOledShowInfo(0,0,"Hello world!",CLEANOLED);
+	// 	OLED_Refresh_Gram();
 		
 		delay_ms(500);
 		
     /*test*/
 //		cameraOperation();
 //	  printToUart();
-		
+#if defined(BIKING) && BIKING
+	Motor_start();
+	RUNNING = 1;
+#endif
 		while(1)
 		{	
+#if defined(BIKING) && BIKING
+			if(RUNNING){
+#endif
 			  changMidGrey();//按键阀值调整
 				cameraOperation();//摄像头更新显示以及后续的图像处理操作接口
-				
-
-
+#if defined(BIKING) && BIKING
+			}
+			else{
+				Motor_Stop();
+				printf("monitor stop\r\n");
+				delay_ms(1000);
+			} 
+#endif
 		}
 		 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

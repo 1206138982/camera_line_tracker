@@ -18,7 +18,13 @@
 #include "math.h"
 #include "sendCmd.h"
 #include "oled.h"
+#include "pid.h"
+#include "l298n.h"
 
+#define BIKING	1
+#if defined(BIKING) && BIKING
+#define SIMPLE_METHOD	1
+#endif
 
 enum All
 {

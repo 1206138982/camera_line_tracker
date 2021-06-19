@@ -50,20 +50,22 @@ u8 OV7670_Init(void)
  	GPIO_Init(GPIOA, &GPIO_InitStructure);
 	 
 	
-  GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_15;  
+//   GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_15;  
+  GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_5;  
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
  	GPIO_Init(GPIOC, &GPIO_InitStructure);
-	GPIO_SetBits(GPIOC,GPIO_Pin_15);
+	// GPIO_SetBits(GPIOC,GPIO_Pin_15);
+	GPIO_SetBits(GPIOC,GPIO_Pin_5);
 	
 	GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_1|GPIO_Pin_3;  
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
  	GPIO_Init(GPIOC, &GPIO_InitStructure);
 	GPIO_SetBits(GPIOC,GPIO_Pin_1|GPIO_Pin_3);
 	
-  	GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_2;  
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
- 	GPIO_Init(GPIOD, &GPIO_InitStructure);
-	GPIO_SetBits(GPIOD,GPIO_Pin_2);
+  	// GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_2;  
+	// GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+ 	// GPIO_Init(GPIOD, &GPIO_InitStructure);
+	// GPIO_SetBits(GPIOD,GPIO_Pin_2);
 
  	SCCB_Init();        		//初始化SCCB 的IO口	   	  
  	if(SCCB_WR_Reg(0x12,0x80))return 1;	//复位SCCB	  

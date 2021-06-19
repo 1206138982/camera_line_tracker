@@ -13,7 +13,8 @@
 //////////////////////////////////////////////////////////////////////////////////
  
 #define OV7670_VSYNC  	PBin(11)			//同步信号检测IO
-#define OV7670_WRST		PCout(15)		//写指针复位
+// #define OV7670_WRST		PCout(15)		//写指针复位
+#define OV7670_WRST		PCout(5)		//写指针复位
 #define OV7670_WREN		PBout(10)		//写入FIFO使能
 #define OV7670_RCK_H	GPIOB->BSRR=1<<1//设置读数据时钟高电平
 #define OV7670_RCK_L	GPIOB->BRR=1<<1	//设置读数据时钟低电平

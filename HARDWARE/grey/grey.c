@@ -1,6 +1,17 @@
 #include "AllHead.h"
+#if defined(BIKING) && BIKING
+#include "l298n.h"
+int RUNNING = 0;
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+u8 step_delay = 60;
+#else
+extern pid_struct	line_pid;
+#endif
+#endif
 
-u8 MidGreyVal = 0x78;//可调阀值
+// u8 MidGreyVal = 0x78;//可调阀值
+// u8 MidGreyVal = 0x60;//可调阀值  for wet day
+u8 MidGreyVal = 0x37;//可调阀值 for night test
 
 //截取出来的图片 是原图的1/8
 u8 cutImg[NEEDHEIGHT][NEEDWITH] = {0};
@@ -54,18 +65,30 @@ void cameraOperation(void)
 			  if(res1 == GOTSLOPE)
 				{
 					  cmdByLine = getCmdBySlope();//获取命令
-//				switch(cmdByLine)
-//				{
-//					case RIGHT0_30:printf("+0_30");break;
-//					case RIGHT30_45:printf("+30_45");break;
-//					case RIGHT45_60:printf("+45_60");break;
-//					case RIGHTMORETHAN60:printf("More+60");break;
-//					case LEFT0_30:printf("-0_-30");break;
-//					case LEFT30_45:printf("-30_-45");break;
-//					case LEFT45_60:printf("-45_-60");break;
-//					case LEFTMORETHAN60:printf("More -60");break;
-//					default:printf("ERROR!");break;
-//				}
+				switch(cmdByLine)
+				{
+#if defined(BIKING) && BIKING
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+					case RIGHT0_30:printf("+0_30");break;
+					case RIGHT30_45:
+					case RIGHT45_60:
+					case RIGHTMORETHAN60:
+						Motor_Turnright();
+						delay_ms(step_delay);
+						Motor_Stop();
+						break;
+					case LEFT0_30:printf("-0_-30");break;
+					case LEFT30_45:
+					case LEFT45_60:
+					case LEFTMORETHAN60:
+						Motor_Turnleft();
+						delay_ms(step_delay);
+						Motor_Stop();
+						break;
+					default:printf("ERROR!");break;
+#endif
+#endif
+				}
 				}
 				else
 				{
@@ -78,7 +101,7 @@ void cameraOperation(void)
 		}
 		
 
-		printToUart();
+		// printToUart();
 		
 		memsetBothBlackLoc();//做完一次摄像头采集刷新操作都要清空！
 
@@ -88,24 +111,84 @@ void cameraOperation(void)
 int getCmdByDeviLoc()
 {
 	  u8 devLocRes = 0;  
-		
+#if defined(BIKING) && BIKING
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+	u8 speed_turn = 20;
+#else
+	int speed_change = 0;
+	static u8 test_flag = 1;
+#endif
+#endif
 	  devLocRes = getLineLocCompare2MidLine(&lineDeviationLoc);	
 		switch(devLocRes)
 		{
 			case BOTHLOST:{
+#if defined(BIKING) && BIKING
+			// RUNNING = 0;
+#endif
 				printf("Both lost");return BOTHLOST;
 			};
 			case TOOLEFT:{
+#if defined(BIKING) && BIKING
+			Motor_Turnleft();
+			// RUNNING = 0;
+#endif
 				  printf("TOO LEFT");return TOOLEFT;
 			}
 			case TOORIGHT:{
+#if defined(BIKING) && BIKING
+			Motor_Turnright();
+			// RUNNING = 0;
+#endif
 			    printf("TOO RIGHT");return TOORIGHT;
 			}
 			case NOMIDLOC:{
+#if defined(BIKING) && BIKING
+			// RUNNING = 0;
+#endif
 			    printf("NO MID LOC");return NOMIDLOC;
 			}
 			case GETMIDLOC:{
-				printf("DEV: %d ",lineDeviationLoc);
+				printf("DEV: %d \r\n",lineDeviationLoc);
+#if defined(BIKING) && BIKING
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+				if(lineDeviationLoc > speed_turn){
+					Motor_Turnright();
+					delay_ms(step_delay);
+					Motor_Stop();
+				}
+				else if(lineDeviationLoc < -speed_turn){
+					Motor_Turnleft();
+					delay_ms(step_delay);
+					Motor_Stop();
+				}
+				else{
+					Motor_Forward();
+					delay_ms(step_delay);
+					Motor_Stop();
+				}
+#else
+				TEST_TIMER = test_flag;
+				if(test_flag)
+					test_flag = 0;
+				else
+					test_flag = 1;
+				// float PID_realize(pid_struct *p_pid_struct,float error);
+				speed_change = (int)PID_realize(&line_pid,lineDeviationLoc);
+				printf("speed_change:%d\r\n",speed_change);
+				Motor_Forward();
+				if(speed_change > 0){
+					//turn right;
+					left_add(speed_change);
+					right_add(0);
+				}
+				else{
+					//turn left
+					left_add(0);
+					right_add(-speed_change);
+				}
+#endif
+#endif
 				if((lineDeviationLoc >= 0) && (lineDeviationLoc <= 10)) return RIGHTDEVI0_10;
 				if((lineDeviationLoc <= 0) && (lineDeviationLoc >= -10)) return LEFTDEVI0_10;
 				if((lineDeviationLoc > 10 ) && (lineDeviationLoc <= 20)) return RIGHTDEVI10_20;
