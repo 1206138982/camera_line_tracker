@@ -23,7 +23,7 @@
 
 #define BIKING	1
 #if defined(BIKING) && BIKING
-#define SIMPLE_METHOD	0
+#define SIMPLE_METHOD	1
 #define FENCHA_TEST	0
 #endif
 
