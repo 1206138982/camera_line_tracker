@@ -62,6 +62,7 @@ u8 OV7670_Init(void)
  	GPIO_Init(GPIOC, &GPIO_InitStructure);
 	GPIO_SetBits(GPIOC,GPIO_Pin_1|GPIO_Pin_3);
 	
+/* 硬件连线没有用到这个引脚 这个引脚用于led 在init时闪烁起到提示*/
   	// GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_2;  
 	// GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
  	// GPIO_Init(GPIOD, &GPIO_InitStructure);
@@ -289,12 +290,3 @@ void OV7670_Window_Set(u16 sx,u16 sy,u16 width,u16 height)
 	SCCB_WR_Reg(0X17,sy>>3);			//设置Href的start高8位
 	SCCB_WR_Reg(0X18,endy>>3);			//设置Href的end的高8位
 }
-
- 
-
-
-
-
-
-
-

@@ -1,4 +1,5 @@
 #include "AllHead.h"
+
 #if defined(BIKING) && BIKING
 #include "l298n.h"
 int RUNNING = 0;
@@ -18,99 +19,87 @@ u8 cutImg[NEEDHEIGHT][NEEDWITH] = {0};
 /*存储左右边界的黑点位置，大小为截出来的图片高度除以隔行扫描数*/
 u8 leftBlackLoc[(NEEDHEIGHT)/(SKIPLINE)]  = {0};
 u8 rightBlackLoc[(NEEDHEIGHT)/(SKIPLINE)] = {0};
-
-
-
 /*存储最为有效的段，在左右边界中挑选出来*/
 u8 maxUsefulBlackLine[(NEEDHEIGHT)/(SKIPLINE)] = {0};
 u8 maxUsefulLineLen = 0;
 //存储最长有效段的高度位置
 u8 maxUsefulBlackHeight[(NEEDHEIGHT)/(SKIPLINE)] = {0};
-
-
 extern u8 ov_sta;	//在exit.c里 面定义
 extern u8 ov_frame;	//在timer.c里面定义		
-
 /*拟合以后的斜率*/
 extern double overK;
 extern int b;
 extern int cmdByLine;
-
 /*检测到的直线相对于中线位置的偏移*/
 int  lineDeviationLoc;
-
 
 /*
 函数功能，统一调用图像采集到数据处理的函数
 */
 void cameraOperation(void)
 {  
-	  u8 res = 0;
-	  u8 res1 = 0;  
-	  u8 res2 = 0;
+	u8 res = 0;
+	u8 res1 = 0;  
+	u8 res2 = 0;
 	
     cameraRefresh();//图像采集二值化以及LCD显示
-		/*紧接着分析边沿，获取左右黑点位置，最后一个参数为检测时的间隔行数*/
-	  getLineEdge(leftBlackLoc,rightBlackLoc,0,NEEDHEIGHT-1,SKIPLINE);	
-	  /*获取最长的有效段，只取一个有效段*/
+	/*紧接着分析边沿，获取左右黑点位置，最后一个参数为检测时的间隔行数*/
+	getLineEdge(leftBlackLoc,rightBlackLoc,0,NEEDHEIGHT-1,SKIPLINE);	
+	/*获取最长的有效段，只取一个有效段*/
     res = getUsefulLine();
     if(res == BOTHLOST)//完全丢失，需要做的动作
+	{
+		//printf("NULL Slope\n");
+	}
+	else //其他情况都有斜率，试着计算出来
+	{
+		/*使用最小二乘法计算出斜率*/
+		res1 = regression(maxUsefulBlackLine,&maxUsefulLineLen,&overK,&b);
+		if(res1 == GOTSLOPE)
 		{
-			  //printf("NULL Slope\n");
-		}
-		else //其他情况都有斜率，试着计算出来
-		{
-			  /*使用最小二乘法计算出斜率*/
-			  res1 = regression(maxUsefulBlackLine,&maxUsefulLineLen,&overK,&b);
-			  if(res1 == GOTSLOPE)
-				{
-					  cmdByLine = getCmdBySlope();//获取命令
-				switch(cmdByLine)
-				{
+			cmdByLine = getCmdBySlope();//获取命令
+			switch(cmdByLine)
+			{
 #if defined(BIKING) && BIKING
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-					case RIGHT0_30:printf("+0_30");break;
-					case RIGHT30_45:
-					case RIGHT45_60:
-					case RIGHTMORETHAN60:
-						Motor_Turnright();
-						delay_ms(step_delay);
-						Motor_Stop();
-						break;
-					case LEFT0_30:printf("-0_-30");break;
-					case LEFT30_45:
-					case LEFT45_60:
-					case LEFTMORETHAN60:
-						Motor_Turnleft();
-						delay_ms(step_delay);
-						Motor_Stop();
-						break;
-					default:printf("ERROR!");break;
+				case RIGHT0_30:printf("+0_30");break;
+				case RIGHT30_45:
+				case RIGHT45_60:
+				case RIGHTMORETHAN60:
+					Motor_Turnright();
+					delay_ms(step_delay);
+					Motor_Stop();
+					break;
+				case LEFT0_30:printf("-0_-30");break;
+				case LEFT30_45:
+				case LEFT45_60:
+				case LEFTMORETHAN60:
+					Motor_Turnleft();
+					delay_ms(step_delay);
+					Motor_Stop();
+					break;
+				default:printf("ERROR!");break;
 #endif
 #endif
-				}
-				}
-				else
-				{
-					  
-				}
-				
-				/*专门做左右边界偏移检测的工作*/
-				res2 = getCmdByDeviLoc();//根据直线相对的偏移获取的命令
+			}
+		}
+		else
+		{
 				
 		}
 		
-
-		// printToUart();
-		
-		memsetBothBlackLoc();//做完一次摄像头采集刷新操作都要清空！
-
+		/*专门做左右边界偏移检测的工作*/
+		res2 = getCmdByDeviLoc();//根据直线相对的偏移获取的命令
+			
+	}
+	// printToUart();
+	memsetBothBlackLoc();//做完一次摄像头采集刷新操作都要清空！
 }
 
 /*专门根据直线的水平位置偏移提供的接口，返回值就是命令*/
 int getCmdByDeviLoc()
 {
-	  u8 devLocRes = 0;  
+	u8 devLocRes = 0;  
 #if defined(BIKING) && BIKING
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 	u8 speed_turn = 20;
@@ -119,267 +108,253 @@ int getCmdByDeviLoc()
 	static u8 test_flag = 1;
 #endif
 #endif
-	  devLocRes = getLineLocCompare2MidLine(&lineDeviationLoc);	
-		switch(devLocRes)
-		{
-			case BOTHLOST:{
+	devLocRes = getLineLocCompare2MidLine(&lineDeviationLoc);	
+	switch(devLocRes)
+	{
+		case BOTHLOST:{
 #if defined(BIKING) && BIKING
-			// RUNNING = 0;
+		// RUNNING = 0;
 #endif
-				printf("Both lost");return BOTHLOST;
-			};
-			case TOOLEFT:{
+			printf("Both lost");return BOTHLOST;
+		};
+		case TOOLEFT:{
 #if defined(BIKING) && BIKING
 			Motor_Turnleft();
 			// RUNNING = 0;
 #endif
-				  printf("TOO LEFT");return TOOLEFT;
-			}
-			case TOORIGHT:{
+			printf("TOO LEFT");return TOOLEFT;
+		}
+		case TOORIGHT:{
 #if defined(BIKING) && BIKING
 			Motor_Turnright();
 			// RUNNING = 0;
 #endif
-			    printf("TOO RIGHT");return TOORIGHT;
-			}
-			case NOMIDLOC:{
+			printf("TOO RIGHT");return TOORIGHT;
+		}
+		case NOMIDLOC:{
 #if defined(BIKING) && BIKING
 			// RUNNING = 0;
 #endif
-			    printf("NO MID LOC");return NOMIDLOC;
-			}
-			case GETMIDLOC:{
-				printf("DEV: %d \r\n",lineDeviationLoc);
+			printf("NO MID LOC");return NOMIDLOC;
+		}
+		case GETMIDLOC:{
+			printf("DEV: %d \r\n",lineDeviationLoc);
 #if defined(BIKING) && BIKING
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-				if(lineDeviationLoc > speed_turn){
-					Motor_Turnright();
-					delay_ms(step_delay);
-					Motor_Stop();
-				}
-				else if(lineDeviationLoc < -speed_turn){
-					Motor_Turnleft();
-					delay_ms(step_delay);
-					Motor_Stop();
-				}
-				else{
-					Motor_Forward();
-					delay_ms(step_delay);
-					Motor_Stop();
-				}
-#else
-				TEST_TIMER = test_flag;
-				if(test_flag)
-					test_flag = 0;
-				else
-					test_flag = 1;
-				// float PID_realize(pid_struct *p_pid_struct,float error);
-				speed_change = (int)PID_realize(&line_pid,lineDeviationLoc);
-				printf("speed_change:%d\r\n",speed_change);
+			if(lineDeviationLoc > speed_turn){
+				Motor_Turnright();
+				delay_ms(step_delay);
+				Motor_Stop();
+			}
+			else if(lineDeviationLoc < -speed_turn){
+				Motor_Turnleft();
+				delay_ms(step_delay);
+				Motor_Stop();
+			}
+			else{
 				Motor_Forward();
-				if(speed_change > 0){
-					//turn right;
-					left_add(speed_change);
-					right_add(0);
-				}
-				else{
-					//turn left
-					left_add(0);
-					right_add(-speed_change);
-				}
+				delay_ms(step_delay);
+				Motor_Stop();
+			}
+#else
+			TEST_TIMER = test_flag;
+			if(test_flag)
+				test_flag = 0;
+			else
+				test_flag = 1;
+			// float PID_realize(pid_struct *p_pid_struct,float error);
+			speed_change = (int)PID_realize(&line_pid,lineDeviationLoc);
+			printf("speed_change:%d\r\n",speed_change);
+			Motor_Forward();
+			if(speed_change > 0){
+				//turn right;
+				left_add(speed_change);
+				right_add(0);
+			}
+			else{
+				//turn left
+				left_add(0);
+				right_add(-speed_change);
+			}
 #endif
 #endif
-				if((lineDeviationLoc >= 0) && (lineDeviationLoc <= 10)) return RIGHTDEVI0_10;
-				if((lineDeviationLoc <= 0) && (lineDeviationLoc >= -10)) return LEFTDEVI0_10;
-				if((lineDeviationLoc > 10 ) && (lineDeviationLoc <= 20)) return RIGHTDEVI10_20;
-				if((lineDeviationLoc < -10) && (lineDeviationLoc >= -20)) return LEFTDEVI10_20;
-				if((lineDeviationLoc > 20 ) && (lineDeviationLoc <= 30)) return RIGHTDEVI20_30;
-				if((lineDeviationLoc < -20) && (lineDeviationLoc >= -30)) return LEFTDEVI20_30;
-				if((lineDeviationLoc > 30 ) && (lineDeviationLoc <= 40)) return RIGHTDEVI30_40;
-				if((lineDeviationLoc < -30) && (lineDeviationLoc >= -40)) return LEFTDEVI30_40;
-				if((lineDeviationLoc > 40 )) return RIGHTDEVMORETHAN40;
-				if((lineDeviationLoc < -40 )) return LEFTDEVMORETHAN40;
-			}	
-			default:return ERR;
+			if((lineDeviationLoc >= 0) && (lineDeviationLoc <= 10)) return RIGHTDEVI0_10;
+			if((lineDeviationLoc <= 0) && (lineDeviationLoc >= -10)) return LEFTDEVI0_10;
+			if((lineDeviationLoc > 10 ) && (lineDeviationLoc <= 20)) return RIGHTDEVI10_20;
+			if((lineDeviationLoc < -10) && (lineDeviationLoc >= -20)) return LEFTDEVI10_20;
+			if((lineDeviationLoc > 20 ) && (lineDeviationLoc <= 30)) return RIGHTDEVI20_30;
+			if((lineDeviationLoc < -20) && (lineDeviationLoc >= -30)) return LEFTDEVI20_30;
+			if((lineDeviationLoc > 30 ) && (lineDeviationLoc <= 40)) return RIGHTDEVI30_40;
+			if((lineDeviationLoc < -30) && (lineDeviationLoc >= -40)) return LEFTDEVI30_40;
+			if((lineDeviationLoc > 40 )) return RIGHTDEVMORETHAN40;
+			if((lineDeviationLoc < -40 )) return LEFTDEVMORETHAN40;
 		}
+		default:return ERR;
+	}
 }
-
 
 /*清空两边原始检测到的边缘*/
 void memsetBothBlackLoc()
 {  
-	  
-	  memset(leftBlackLoc,0,(NEEDHEIGHT)/(SKIPLINE));
-	  memset(rightBlackLoc,0,(NEEDHEIGHT)/(SKIPLINE));
+	memset(leftBlackLoc,0,(NEEDHEIGHT)/(SKIPLINE));
+	memset(rightBlackLoc,0,(NEEDHEIGHT)/(SKIPLINE));
 }
-
 
 /*
 函数功能：从OV7670的FIFO中读出像素，在翻转的基础上进行二值化，并在LCD上显示调试
 */
 void cameraRefresh(void)
 {
-	u32 m = 0;u32 n = 0;u32 mm = 0;u32 nn = 0;u16 color;	 
-
+	u32 m = 0;u32 n = 0;u32 mm = 0;u32 nn = 0;u16 color;
 	if(ov_sta)//有帧中断更新？
 	{
-		  LCD_Scan_Dir(DFT_SCAN_DIR);	//恢复默认扫描方向 
-			LCD_Set_Window(100,100,120,80);//将显示区域设置到屏幕中央
-		  LCD_WriteRAM_Prepare();     //开始写入GRAM	
+		LCD_Scan_Dir(DFT_SCAN_DIR);	//恢复默认扫描方向 
+		LCD_Set_Window(100,100,120,80);//将显示区域设置到屏幕中央
+		LCD_WriteRAM_Prepare();     //开始写入GRAM	
 		  
-			OV7670_RRST=0;				//开始复位读指针 
-			OV7670_RCK_L;
-			OV7670_RCK_H;
-			OV7670_RCK_L;
-			OV7670_RRST=1;				//复位读指针结束 
-			OV7670_RCK_H;
+		OV7670_RRST=0;				//开始复位读指针 
+		OV7670_RCK_L;
+		OV7670_RCK_H;
+		OV7670_RCK_L;
+		OV7670_RRST=1;				//复位读指针结束 
+		OV7670_RCK_H;
       
-		  for(m = 0;m < 240;m ++)//行
-		  {
-		      for(n = 0;n < 320;n ++)//列
-				  {
-							//读取两个字节的数据
-							OV7670_RCK_L;
-							color=GPIOA->IDR&0XFF;	//读数据，摄像头使用PC0-7作为数据输入输出，GPIOC的端口输入数据寄存器
-							OV7670_RCK_H; 
-							color<<=8;  
-							OV7670_RCK_L;
-							color|=GPIOA->IDR&0XFF;	//读数据，虽然用不到，但是要是不读这个送color，整个屏幕会出现闪动，所以为了调试方便，还是读一下
-							OV7670_RCK_H; 
-							
-							//上面读取的U和V进行清空，舍弃。
-							color &= 0xff00;
-							/*
-							判断阀值，进行显示二值
-							但为了显示到LCD上可以看到，使用两个字节进行表示二值
-							*/
-							if( m % 2 == 0)//选中需要的行了，隔着两行
-						  {
-								  if( n % 4 == 0)//选中的列，隔着四列
-									{
-											color >>= 8;
-										  /*进行数组的翻转存储*/
-											if( (u8)color > MidGreyVal) //左移过后，低八位为需要的Y值
-											{
-													 cutImg[n / 4][m / 2] = 0xff;//白色
-											}
-											else 
-											{
-													 cutImg[n / 4][m / 2] = 0x00;//黑色									
-											}
-									}
-						  }
-					}
-			}   	
-			ov_sta=0;					//清零帧中断标记
-			ov_frame++;
-		
-			/*
-			将采集到的像素存在数组中以后，再向LCD输出，LCD默认使用从左往右，从上往下的方式
-			那么LCD上显示正向的图片，就说明我上面的数组的翻转做的是正确的。
-			接下来对图像的解析，直接可以使用这个数组中的参数，默认图片就是从左往右，从上往下
-			*/
-			for(mm = 0;mm < 80;mm ++)  //80行
+		for(m = 0;m < 240;m ++)//行
+		{
+			for(n = 0;n < 320;n ++)//列
 			{
-					for(nn = 0;nn < 120;nn ++)  //120列
+				//读取两个字节的数据
+				OV7670_RCK_L;
+				color=GPIOA->IDR&0XFF;	//读数据，摄像头使用PC0-7作为数据输入输出，GPIOC的端口输入数据寄存器
+				OV7670_RCK_H; 
+				color<<=8;  
+				OV7670_RCK_L;
+				color|=GPIOA->IDR&0XFF;	//读数据，虽然用不到，但是要是不读这个送color，整个屏幕会出现闪动，所以为了调试方便，还是读一下
+				OV7670_RCK_H; 
+				
+				//上面读取的U和V进行清空，舍弃。
+				color &= 0xff00;
+				/*
+				判断阀值，进行显示二值
+				但为了显示到LCD上可以看到，使用两个字节进行表示二值
+				*/
+				if( m % 2 == 0)//选中需要的行了，隔着两行
+				{
+					if( n % 4 == 0)//选中的列，隔着四列
 					{
-							if(cutImg[mm][nn] == 0xff)
-							{
-									color = 0xffff;//黑色
-									LCD->LCD_RAM = color; 
-							}
-							else if(cutImg[mm][nn] == 0x00)
-							{
-									color = 0x0000;//白色
-									LCD->LCD_RAM = color; 
-							}
-					 }
-			 }
-	 } 
+						color >>= 8;
+						/*进行数组的翻转存储*/
+						if( (u8)color > MidGreyVal) //左移过后，低八位为需要的Y值
+						{
+							cutImg[n / 4][m / 2] = 0xff;//白色
+						}
+						else 
+						{
+							cutImg[n / 4][m / 2] = 0x00;//黑色									
+						}
+					}
+				}
+			}
+		}   	
+		ov_sta=0;					//清零帧中断标记
+		ov_frame++;
+		/*
+		将采集到的像素存在数组中以后，再向LCD输出，LCD默认使用从左往右，从上往下的方式
+		那么LCD上显示正向的图片，就说明我上面的数组的翻转做的是正确的。
+		接下来对图像的解析，直接可以使用这个数组中的参数，默认图片就是从左往右，从上往下
+		*/
+		for(mm = 0;mm < 80;mm ++)  //80行
+		{
+			for(nn = 0;nn < 120;nn ++)  //120列
+			{
+				if(cutImg[mm][nn] == 0xff)
+				{
+					color = 0xffff;//黑色
+					LCD->LCD_RAM = color; 
+				}
+				else if(cutImg[mm][nn] == 0x00)
+				{
+					color = 0x0000;//白色
+					LCD->LCD_RAM = color; 
+				}
+			}
+		}
+	 }
 }	   
 
 
 /*根据按键，修改阀值*/
 void changMidGrey()
 {
-	  u8 key;	
+	u8 key;	
 	
-	  key=KEY_Scan(0);//不支持连按
-		if(key)
-		{
-				switch(key)
-				{				    
-						case KEY0_PRES:{
-							  MidGreyVal += MODIFYVAL;
-		            if(MidGreyVal >= MAXGREY){MidGreyVal = MINGREY;}
-								break;
-						}
-						case KEY1_PRES:	{
-								MidGreyVal -= MODIFYVAL;
-								if(MidGreyVal <= MINGREY){MidGreyVal = MAXGREY;}
-								break;
-						}
-						case KEY2_PRES: {
-							
-							  
-						    break;
-						}
-							
-						case WKUP_PRES:{
-							
-							  break;
-						}
-				}
-		}	 
+	key=KEY_Scan(0);//不支持连按
+	if(key)
+	{
+		switch(key)
+		{				    
+			case KEY0_PRES:{
+				MidGreyVal += MODIFYVAL;
+				if(MidGreyVal >= MAXGREY){MidGreyVal = MINGREY;}
+					break;
+			}
+			case KEY1_PRES:	{
+				MidGreyVal -= MODIFYVAL;
+				if(MidGreyVal <= MINGREY){MidGreyVal = MAXGREY;}
+				break;
+			}
+			case KEY2_PRES: {
+				break;
+			}
+			case WKUP_PRES:{
+				break;
+			}
+		}
+	}	 
 }
 
 /*调试使用，打印到串口上*/
 void printToUart()
 {
-	
-
-	  u8 res;
-	  u32 mm;
-	  u32 nn;
-    u32 i,j;	
-
-	  for(i = 0;i < NEEDHEIGHT;i ++)
+	u8 res;
+	u32 mm;
+	u32 nn;
+    u32 i,j;
+	for(i = 0;i < NEEDHEIGHT;i ++)
     {
-			  printf("****");
-			  for(j = 0;j < NEEDWITH;j ++)
-			  {
-					  if(cutImg[i][j] == 0xff)
-						{
-							  printf("1");
-						}
-						else
-						{
-							  printf("0");
-						}
-					  
-			  }
-				printf("****\n");
-		}	
-	
-	
-		#if 0
-	  /*打印左右边界点*/
-	  printf("Left:");
-	  for(mm = 0;mm < (NEEDHEIGHT)/(SKIPLINE);mm ++)
+		printf("****");
+		for(j = 0;j < NEEDWITH;j ++)
 		{
-			  printf("%d ",leftBlackLoc[mm]);
+			if(cutImg[i][j] == 0xff)
+			{
+				printf("1");
+			}
+			else
+			{
+				printf("0");
+			}
+				
 		}
-		printf("\n");
-		printf("******************");
-		printf("\n");
-		printf("Right:");
-		for(nn = 0;nn < (NEEDHEIGHT)/(SKIPLINE);nn ++)
-		{
-			  printf("%d ",rightBlackLoc[nn]);
-		}
-		#endif
-//		
-		
+		printf("****\n");
+	}
+	
+	#if 0
+	/*打印左右边界点*/
+	printf("Left:");
+	for(mm = 0;mm < (NEEDHEIGHT)/(SKIPLINE);mm ++)
+	{
+		printf("%d ",leftBlackLoc[mm]);
+	}
+	printf("\n");
+	printf("******************");
+	printf("\n");
+	printf("Right:");
+	for(nn = 0;nn < (NEEDHEIGHT)/(SKIPLINE);nn ++)
+	{
+		printf("%d ",rightBlackLoc[nn]);
+	}
+	#endif
+
 ////打印最长边界
 //		printf("\n");
 //		printf("MAX Len:%d",maxUsefulLineLen);
@@ -406,130 +381,128 @@ void printToUart()
 */
 void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u16 skipLine)
 {
-		u16 i = 0;
-	  //u16 j = 0;
-	  u16 tmpHeight = 0; 
+	u16 i = 0;
+	//u16 j = 0;
+	u16 tmpHeight = 0; 
 #if defined(FENCHA_TEST) && FENCHA_TEST
 	u8 get_fencha = 0;
 #endif
 	
-	
     /*间隔扫描几行*/	
-	  for(tmpHeight = startLine;tmpHeight < endLine;tmpHeight += skipLine)
-	  {
+	for(tmpHeight = startLine;tmpHeight < endLine;tmpHeight += skipLine)
+	{
 #if defined(FENCHA_TEST) && FENCHA_TEST
 		get_fencha = 0;
 #endif
-			  /*一行中的检测跳变，每行中就检测一个左点，一个右点*/
-			  for(i = 0;i < NEEDWITH - 3;i ++)  //连续判断三个点，所以最后三个点舍去
-			  {
+		/*一行中的检测跳变，每行中就检测一个左点，一个右点*/
+		for(i = 0;i < NEEDWITH - 3;i ++)  //连续判断三个点，所以最后三个点舍去
+		{
 #if defined(FENCHA_TEST) && FENCHA_TEST
-					if(cutImg[tmpHeight][i] == 0)
-						get_fencha++;
+			if(cutImg[tmpHeight][i] == 0)
+				get_fencha++;
 #endif
-						/*检测到正跳变，紧接着就是相同的高电平，那么就是右边的黑色点被检测到了 i+1就是黑点的位置*/
-						if(  ((cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) <= UPJUMP) && 
-								(cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])  )
-						{*rightBlackLoc = i+1;}
+				/*检测到正跳变，紧接着就是相同的高电平，那么就是右边的黑色点被检测到了 i+1就是黑点的位置*/
+			if(  ((cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) <= UPJUMP) && 
+					(cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])  )
+			{*rightBlackLoc = i+1;}
 
-						/*检测到负跳变，紧接着就是相同的低电平，那么就是左侧的黑点被检测到了 i+1就是黑点的位置*/
-						if( (cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) >= DOWNJUMP && 
-								((cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2] ) )
-							)
-						//存储左黑点的位置
-						{*leftBlackLoc = i+1;}
-				}
-				//准备下一行
-        rightBlackLoc ++;leftBlackLoc  ++;				
-#if defined(FENCHA_TEST) && FENCHA_TEST
-			if(get_fencha > 80){
-				// RUNNING = 0;
-				turnA();
-			}
-#endif
+			/*检测到负跳变，紧接着就是相同的低电平，那么就是左侧的黑点被检测到了 i+1就是黑点的位置*/
+			if( (cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) >= DOWNJUMP && 
+					((cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2] ) )
+				)
+			//存储左黑点的位置
+			{*leftBlackLoc = i+1;}
 		}
+			//准备下一行
+		rightBlackLoc ++;leftBlackLoc  ++;				
+#if defined(FENCHA_TEST) && FENCHA_TEST
+		if(get_fencha > 80){
+			// RUNNING = 0;
+			turnA();
+		}
+#endif
+	}
 }
 
 /*将获取有效段的函数部分进行复用*/
 //参数分别是 原始段  段前0的个数  存储最长有效段的位置数组  存储最长长度  存储最长有效段的高度位置
 void getOneSideUsefulLine(u8 *needBlackLoc,u8 countZero,u8 *maxUBlackLine,u8 *maxUBlackLineLen,u8 *maxUBlackHeight)
 {
-	  int i = 0;
-	  int j = 0;
-	  	  /*截取最长段的临时存储变量*/
-	  u8 tmpMaxUsefulLineLen = 0;//实时保存当前最长的段长度
-	  u8 tmpMaxUsefulLine[(NEEDHEIGHT)/(SKIPLINE)]  = {0}; //用于保存有效的最长段
-	  u8 tmpmaxUBlackHeight[(NEEDHEIGHT)/(SKIPLINE)] = {0};//保存高度
-		
-		//从左边第一个有效的地方往后检测，直到最后
-		for(i = countZero;i < (NEEDHEIGHT)/(SKIPLINE) - 2;i ++)
+	int i = 0;
+	int j = 0;
+	/*截取最长段的临时存储变量*/
+	u8 tmpMaxUsefulLineLen = 0;//实时保存当前最长的段长度
+	u8 tmpMaxUsefulLine[(NEEDHEIGHT)/(SKIPLINE)]  = {0}; //用于保存有效的最长段
+	u8 tmpmaxUBlackHeight[(NEEDHEIGHT)/(SKIPLINE)] = {0};//保存高度
+	
+	//从左边第一个有效的地方往后检测，直到最后
+	for(i = countZero;i < (NEEDHEIGHT)/(SKIPLINE) - 2;i ++)
+	{
+		/*
+			如果第三个位置，直接就是0，那么认为这一段就要采集结束了，
+			将临时的段存储到全局的变量中
+		*/
+		if(needBlackLoc[i+2] == 0)//一段采集结束
 		{
-				/*
-					如果第三个位置，直接就是0，那么认为这一段就要采集结束了，
-					将临时的段存储到全局的变量中
-				*/
-				if(needBlackLoc[i+2] == 0)//一段采集结束
-				{
-						//如果段比较长的话，才选中
-						if((*maxUBlackLineLen) < tmpMaxUsefulLineLen)
-						{
-								//存储
-								(*maxUBlackLineLen) = tmpMaxUsefulLineLen;
-								memset(maxUBlackLine,0,(NEEDHEIGHT)/(SKIPLINE));//清空以备存储
-							  memset(maxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
-								for(j = 0;j <= tmpMaxUsefulLineLen;j ++)
-								{
-										maxUBlackLine[j] = tmpMaxUsefulLine[j];
-									  maxUBlackHeight[j] = tmpmaxUBlackHeight[j];//存储高度
-								}
-						}
-						//存完清空
-						memset(tmpMaxUsefulLine,0,(NEEDHEIGHT)/(SKIPLINE));
-						memset(tmpmaxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
-						tmpMaxUsefulLineLen = 0;
-						/*结束*/
-						//将i+2以及后续有0的位置全部跳过
-						if((i + 3) < (NEEDHEIGHT)/(SKIPLINE))//放置越界
-						{
-								i += 3;//从i + 3位置开始
-						}
-						/*未到最后第三个，并且一直为0，那么就继续*/
-						while((i < ((NEEDHEIGHT)/(SKIPLINE) - 2)) && (needBlackLoc[i] == 0))
-						{
-								i ++;
-						}
-						continue;
-				}
-				//连续三个位置的比较，实时存储
-				if((needBlackLoc[i] != 0) && (needBlackLoc[i+1] != 0) && (needBlackLoc[i+2] != 0) &&
-					(abs((needBlackLoc[i] - needBlackLoc[i+1]) - (needBlackLoc[i+1] - needBlackLoc[i+2])) <= DEVIATION))
-				{
-						/*存储进临时数组中*/
-						tmpMaxUsefulLine[tmpMaxUsefulLineLen] = needBlackLoc[i];
-					  tmpmaxUBlackHeight[tmpMaxUsefulLineLen] = i;//存储高度
-						tmpMaxUsefulLineLen ++;
-					  
-				}
-		}
-		
-		/*从有效位置开始，全部有符合的位置，做存储和清空操作*/
-		//如果段比较长的话，才选中
-		if((*maxUBlackLineLen) < tmpMaxUsefulLineLen)
-		{
+			//如果段比较长的话，才选中
+			if((*maxUBlackLineLen) < tmpMaxUsefulLineLen)
+			{
 				//存储
 				(*maxUBlackLineLen) = tmpMaxUsefulLineLen;
-			  memset(maxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));//清空高度，以备存储
 				memset(maxUBlackLine,0,(NEEDHEIGHT)/(SKIPLINE));//清空以备存储
+				memset(maxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
 				for(j = 0;j <= tmpMaxUsefulLineLen;j ++)
 				{
-						maxUBlackLine[j] = tmpMaxUsefulLine[j];
-					  maxUBlackHeight[j] = tmpmaxUBlackHeight[j];//存储高度
+					maxUBlackLine[j] = tmpMaxUsefulLine[j];
+					maxUBlackHeight[j] = tmpmaxUBlackHeight[j];//存储高度
 				}
+			}
+			//存完清空
+			memset(tmpMaxUsefulLine,0,(NEEDHEIGHT)/(SKIPLINE));
+			memset(tmpmaxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
+			tmpMaxUsefulLineLen = 0;
+			/*结束*/
+			//将i+2以及后续有0的位置全部跳过
+			if((i + 3) < (NEEDHEIGHT)/(SKIPLINE))//放置越界
+			{
+				i += 3;//从i + 3位置开始
+			}
+			/*未到最后第三个，并且一直为0，那么就继续*/
+			while((i < ((NEEDHEIGHT)/(SKIPLINE) - 2)) && (needBlackLoc[i] == 0))
+			{
+				i ++;
+			}
+			continue;
 		}
-		//存完清空
-		memset(tmpMaxUsefulLine,0,(NEEDHEIGHT)/(SKIPLINE));
-		memset(tmpmaxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
-		tmpMaxUsefulLineLen = 0;
+		//连续三个位置的比较，实时存储
+		if((needBlackLoc[i] != 0) && (needBlackLoc[i+1] != 0) && (needBlackLoc[i+2] != 0) &&
+			(abs((needBlackLoc[i] - needBlackLoc[i+1]) - (needBlackLoc[i+1] - needBlackLoc[i+2])) <= DEVIATION))
+		{
+			/*存储进临时数组中*/
+			tmpMaxUsefulLine[tmpMaxUsefulLineLen] = needBlackLoc[i];
+			tmpmaxUBlackHeight[tmpMaxUsefulLineLen] = i;//存储高度
+			tmpMaxUsefulLineLen ++;
+		}
+	}
+	
+	/*从有效位置开始，全部有符合的位置，做存储和清空操作*/
+	//如果段比较长的话，才选中
+	if((*maxUBlackLineLen) < tmpMaxUsefulLineLen)
+	{
+		//存储
+		(*maxUBlackLineLen) = tmpMaxUsefulLineLen;
+		memset(maxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));//清空高度，以备存储
+		memset(maxUBlackLine,0,(NEEDHEIGHT)/(SKIPLINE));//清空以备存储
+		for(j = 0;j <= tmpMaxUsefulLineLen;j ++)
+		{
+			maxUBlackLine[j] = tmpMaxUsefulLine[j];
+			maxUBlackHeight[j] = tmpmaxUBlackHeight[j];//存储高度
+		}
+	}
+	//存完清空
+	memset(tmpMaxUsefulLine,0,(NEEDHEIGHT)/(SKIPLINE));
+	memset(tmpmaxUBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
+	tmpMaxUsefulLineLen = 0;
 }
 
 
@@ -538,125 +511,114 @@ void getOneSideUsefulLine(u8 *needBlackLoc,u8 countZero,u8 *maxUBlackLine,u8 *ma
 */
 int getUsefulLine()
 {	  
-	  //默认边界没有找到
-	  u8 LeftDirect = LEFTLOST;
-	  u8 RightDirect = RIGHTLOST;
-	  /*临时变量*/
-	  u8 countLeftZero = 0;//统计一个边界中的0的无用数据个数的临时变量
-	  u8 countRightZero = 0;//统计一个边界中的0的无用数据个数的临时变量
+	//默认边界没有找到
+	u8 LeftDirect = LEFTLOST;
+	u8 RightDirect = RIGHTLOST;
+	/*临时变量*/
+	u8 countLeftZero = 0;//统计一个边界中的0的无用数据个数的临时变量
+	u8 countRightZero = 0;//统计一个边界中的0的无用数据个数的临时变量
 
 /*预先对左右边界进行处理，如果没有检测到就必须返回，结束此函数*/
-	  /*左边滤除数组开始的0操作*/
-	  while((countLeftZero < 20) && (leftBlackLoc[countLeftZero] == 0))
-		{
-			  countLeftZero ++;//下一个数据
-		}
-		if(countLeftZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
-		{
-			  LeftDirect = LEFTLOST;
-		}
-		else
-		{
-			  LeftDirect = GETDIRECT;
-		}
-		
-		/*右边滤除0操作*/
-		while((countRightZero < 20) && (rightBlackLoc[countRightZero] == 0))
-    {
-			  //下一个数据
-		    countRightZero ++;
-		}
-		if(countRightZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
-		{
-		    RightDirect = RIGHTLOST;
-		}
-		else
-    {
-		    RightDirect = GETDIRECT;
-		}
-		//均丢失，那么就直接结束函数
-		if((LeftDirect == LEFTLOST) && (RightDirect == RIGHTLOST))
-		{
-			  return BOTHLOST;
-		}
-		
-		
+	/*左边滤除数组开始的0操作*/
+	while((countLeftZero < 20) && (leftBlackLoc[countLeftZero] == 0))
+	{
+		countLeftZero ++;//下一个数据
+	}
+	if(countLeftZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
+	{
+		LeftDirect = LEFTLOST;
+	}
+	else
+	{
+		LeftDirect = GETDIRECT;
+	}
+	
+	/*右边滤除0操作*/
+	while((countRightZero < 20) && (rightBlackLoc[countRightZero] == 0))
+	{
+		//下一个数据
+		countRightZero ++;
+	}
+	if(countRightZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
+	{
+		RightDirect = RIGHTLOST;
+	}
+	else
+	{
+		RightDirect = GETDIRECT;
+	}
+	//均丢失，那么就直接结束函数
+	if((LeftDirect == LEFTLOST) && (RightDirect == RIGHTLOST))
+	{
+		return BOTHLOST;
+	}
+	
 /*左右边界检测开始*/
-    /*如果左边边界检测到了，那么才检测这个数组*/
-		if(LeftDirect == GETDIRECT)
-		{
-			  getOneSideUsefulLine(leftBlackLoc,countLeftZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
-		}
-		/*如果右边边界检测到了，那么才开始检测数组*/
-		if(RightDirect == GETDIRECT)
-		{
-			  getOneSideUsefulLine(rightBlackLoc,countRightZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
-		}
-		
-		/*要是只有一个或者根本就没有获取到最长段数据，那么这次的采集就是失败的，返回失败的信号*/
-		if((maxUsefulLineLen == 0) || (maxUsefulLineLen == 1) || (maxUsefulLineLen == 2) || (maxUsefulLineLen == 3))
-		{
-			  /*清空返回*/
-			  maxUsefulLineLen = 0;
-			  memset(maxUsefulBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
-        memset(maxUsefulBlackLine,0,(NEEDHEIGHT)/(SKIPLINE));			
-			  return BOTHLOST;
-		}
-		
-	  return GETDIRECT;
+/*如果左边边界检测到了，那么才检测这个数组*/
+	if(LeftDirect == GETDIRECT)
+	{
+		getOneSideUsefulLine(leftBlackLoc,countLeftZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+	}
+	/*如果右边边界检测到了，那么才开始检测数组*/
+	if(RightDirect == GETDIRECT)
+	{
+		getOneSideUsefulLine(rightBlackLoc,countRightZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+	}
+	
+	/*要是只有一个或者根本就没有获取到最长段数据，那么这次的采集就是失败的，返回失败的信号*/
+	if((maxUsefulLineLen == 0) || (maxUsefulLineLen == 1) || (maxUsefulLineLen == 2) || (maxUsefulLineLen == 3))
+	{
+			/*清空返回*/
+		maxUsefulLineLen = 0;
+		memset(maxUsefulBlackHeight,0,(NEEDHEIGHT)/(SKIPLINE));
+		memset(maxUsefulBlackLine,0,(NEEDHEIGHT)/(SKIPLINE));			
+		return BOTHLOST;
+	}
+	return GETDIRECT;
 }
-
-
 
 u8 testLineWidth = 0;
 
 /*获得当前线宽*/
 int getLineWidth(u8 *lMaxULine,u8 *rMaxULine,u8 lMaxULen,u8 rMaxULen,u8 *lMaxLineHei,u8 *rMaxLineHei,u8 *lineWidth)
 {
-	  u8 i;
-//	  u8 j;
-//	  u8 m,n;
-		//检测一个水平位置上，两个有效段均存在这个水平位置上有位置
-    /*首先获得斜线的水平线宽*/
-		if(lMaxULen <= rMaxULen)//左边最长有效线段较短，依据左边
+	u8 i;
+	// u8 j;
+	// u8 m,n;
+	//检测一个水平位置上，两个有效段均存在这个水平位置上有位置
+/*首先获得斜线的水平线宽*/
+	if(lMaxULen <= rMaxULen)//左边最长有效线段较短，依据左边
+	{
+		for(i = 0;i < lMaxULen;i ++)//开始匹配同一水平位置左右均存在有效交点
 		{
-        for(i = 0;i < lMaxULen;i ++)//开始匹配同一水平位置左右均存在有效交点
-			  {
-					  if(rightBlackLoc[lMaxLineHei[i]] != 0)//在左边有效位置高度，存在右边有效线段交点
-						{
-							  *lineWidth = abs(rightBlackLoc[lMaxLineHei[i]] - lMaxULine[i]);
-							  /*test*/
-							  testLineWidth = *lineWidth;
-							
-							  return GOTLINEWIDTH;
-						}
-				}
+			if(rightBlackLoc[lMaxLineHei[i]] != 0)//在左边有效位置高度，存在右边有效线段交点
+			{
+				*lineWidth = abs(rightBlackLoc[lMaxLineHei[i]] - lMaxULine[i]);
+				/*test*/
+				testLineWidth = *lineWidth;
+				return GOTLINEWIDTH;
+			}
 		}
-		else //右边的最小有效段较短，依据右边
+	}
+	else //右边的最小有效段较短，依据右边
+	{
+		for(i = 0;i < rMaxULen;i ++)//开始匹配同一水平位置左右均存在有效交点
 		{
-			  for(i = 0;i < rMaxULen;i ++)//开始匹配同一水平位置左右均存在有效交点
-			  {
-					  if(leftBlackLoc[rMaxLineHei[i]] != 0)//在左边有效位置高度，存在右边有效线段交点
-						{
-							  *lineWidth = abs(leftBlackLoc[rMaxLineHei[i]] - rMaxULine[i]);
-							  /*test*/
-							  testLineWidth = *lineWidth;
-							
-							  return GOTLINEWIDTH;
-						}
-				}
+			if(leftBlackLoc[rMaxLineHei[i]] != 0)//在左边有效位置高度，存在右边有效线段交点
+			{
+				*lineWidth = abs(leftBlackLoc[rMaxLineHei[i]] - rMaxULine[i]);
+				/*test*/
+				testLineWidth = *lineWidth;
+				return GOTLINEWIDTH;
+			}
 		}
-		//出错处理
-		*lineWidth = 0;
-		
-		/*test*/
-		testLineWidth = *lineWidth;
-		
-		
-		return NOLINEWIDTH;
+	}
+	//出错处理
+	*lineWidth = 0;
+	/*test*/
+	testLineWidth = *lineWidth;
+	return NOLINEWIDTH;
 }
-
-
 /*
 函数功能：获取的是，当前检测到的直线（不论有没有倾斜），它相对于直线在屏幕中央的相对偏移
 左偏为负，正偏为正
@@ -664,134 +626,127 @@ int getLineWidth(u8 *lMaxULine,u8 *rMaxULine,u8 lMaxULen,u8 rMaxULen,u8 *lMaxLin
 然后，使用获取最长有效段的函数接口，获得两个边界的最长有效段
 然后，依据比较短的最长有效段，计算出当前的线宽
 再用中点位置，和一边的距离，整合线宽就可以计算出偏移量了。
-
 */
 int getLineLocCompare2MidLine(int *realVerticalDevationLoc)//传入用于返回的变量，为相对的偏移量
 {
-	  u8 i = 0;
-	  u8 j = 0;
-	  u8 res = 0;
-	
-   /*保存临时的左右最长有效边界的数组*/
-   u8 leftMaxULineLoc[((NEEDHEIGHT)/(SKIPLINE))] = {0};
-	 u8 rightMaxULineLoc[((NEEDHEIGHT)/(SKIPLINE))] = {0};
-	 //最长长度
-	 u8 leftMaxULen = 0;
-	 u8 rightMaxULen = 0;
-	 //有效段的高度位置
-	 u8 leftMaxUBlackHeight[((NEEDHEIGHT)/(SKIPLINE))] = {0};
-	 u8 rightMaxUBlackHeight[((NEEDHEIGHT)/(SKIPLINE))] = {0};
-	 //当前线宽
-	 u8 lineWidth = 0;
-	
+	u8 i = 0;
+	u8 j = 0;
+	u8 res = 0;
+/*保存临时的左右最长有效边界的数组*/
+	u8 leftMaxULineLoc[((NEEDHEIGHT)/(SKIPLINE))] = {0};
+	u8 rightMaxULineLoc[((NEEDHEIGHT)/(SKIPLINE))] = {0};
+	//最长长度
+	u8 leftMaxULen = 0;
+	u8 rightMaxULen = 0;
+	//有效段的高度位置
+	u8 leftMaxUBlackHeight[((NEEDHEIGHT)/(SKIPLINE))] = {0};
+	u8 rightMaxUBlackHeight[((NEEDHEIGHT)/(SKIPLINE))] = {0};
+	//当前线宽
+	u8 lineWidth = 0;
 /******预先对左右边界进行处理，如果没有检测到就必须返回，结束此函数*****/
-    /*首先将段开始的无用数据滤除*/
-	  //默认边界没有找到
-	  u8 LeftDirect = LEFTLOST;
-	  u8 RightDirect = RIGHTLOST;
-	  /*临时变量*/
-	  u8 countLeftZero = 0;//统计一个边界中的0的无用数据个数的临时变量
-	  u8 countRightZero = 0;//统计一个边界中的0的无用数据个数的临时变量
-	  /*左边滤除数组开始的0操作*/
-	  while((countLeftZero < 20) && (leftBlackLoc[countLeftZero] == 0))
-		{ countLeftZero ++;}//下一个数据
-		if(countLeftZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
-		{LeftDirect = LEFTLOST;}
-		else{LeftDirect = GETDIRECT;}
-		/*右边滤除0操作*/
-		while((countRightZero < 20) && (rightBlackLoc[countRightZero] == 0))
-    {countRightZero ++;}//下一个数据
-		if(countRightZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
-		{RightDirect = RIGHTLOST;}
-		else{RightDirect = GETDIRECT;}
-		//均丢失，那么就直接结束函数
-		if((LeftDirect == LEFTLOST) && (RightDirect == RIGHTLOST))
-		{
-		    return BOTHLOST;//只返回丢失信号，不做偏移量复制
-		}
+/*首先将段开始的无用数据滤除*/
+	//默认边界没有找到
+	u8 LeftDirect = LEFTLOST;
+	u8 RightDirect = RIGHTLOST;
+	/*临时变量*/
+	u8 countLeftZero = 0;//统计一个边界中的0的无用数据个数的临时变量
+	u8 countRightZero = 0;//统计一个边界中的0的无用数据个数的临时变量
+	/*左边滤除数组开始的0操作*/
+	while((countLeftZero < 20) && (leftBlackLoc[countLeftZero] == 0))
+	{ countLeftZero ++;}//下一个数据
+	if(countLeftZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
+	{LeftDirect = LEFTLOST;}
+	else{LeftDirect = GETDIRECT;}
+	/*右边滤除0操作*/
+	while((countRightZero < 20) && (rightBlackLoc[countRightZero] == 0))
+	{countRightZero ++;}//下一个数据
+	if(countRightZero == 20)//如果全部为0，那么就是没有边界，直接将标志位置为lost丢失
+	{RightDirect = RIGHTLOST;}
+	else{RightDirect = GETDIRECT;}
+	//均丢失，那么就直接结束函数
+	if((LeftDirect == LEFTLOST) && (RightDirect == RIGHTLOST))
+	{
+		return BOTHLOST;//只返回丢失信号，不做偏移量复制
+	}
 /***********************************************************************/
-		/*没有检测到左边的边界 那么就是太偏左了，这时根本确定不了偏移量，只能返回设置的最大值*/
-		if((LeftDirect == LEFTLOST) && (RightDirect == GETDIRECT))
+	/*没有检测到左边的边界 那么就是太偏左了，这时根本确定不了偏移量，只能返回设置的最大值*/
+	if((LeftDirect == LEFTLOST) && (RightDirect == GETDIRECT))
+	{
+		*realVerticalDevationLoc = -80;
+		return TOOLEFT;
+	}
+	/*没有检测到右边的边界*/
+	if((LeftDirect == GETDIRECT) && (RightDirect == RIGHTLOST))
+	{
+		*realVerticalDevationLoc = 80;
+		return TOORIGHT;
+	}
+	/*************************以下均为有两边边界的*********************************/
+	
+	/*如果检测到了左右边界，再分一下几种情况*/
+	//首先采集一次左右边界的有效段。
+	getOneSideUsefulLine(leftBlackLoc,countLeftZero,leftMaxULineLoc,&leftMaxULen,leftMaxUBlackHeight);
+	getOneSideUsefulLine(rightBlackLoc,countRightZero,rightMaxULineLoc,&rightMaxULen,rightMaxUBlackHeight);
+	//那么现在leftMaxULineLoc leftMaxULen 和 rightMaxULineLoc  rightMaxULen中已经可以使用了
+	//过滤有效段太短的边界，直接返回太偏左偏右即可
+	if((leftMaxULen <= 2)){
+		*realVerticalDevationLoc = -80;
+		return TOOLEFT;
+	}
+	if((rightMaxULen <= 2)){
+		*realVerticalDevationLoc = 80;
+		return TOORIGHT;
+	}
+	/*获得线宽*/
+	res = getLineWidth(leftMaxULineLoc,rightMaxULineLoc,leftMaxULen,rightMaxULen,leftMaxUBlackHeight,rightMaxUBlackHeight,&lineWidth);
+	if(res == NOLINEWIDTH)//如果没有获取到线宽
+	{
+		lineWidth = 0;
+		*realVerticalDevationLoc = 0;
+		return NOLINEWIDTH;
+	}
+	/*开始使用整个屏幕中点去计算偏移，默认肯定检测到了两边*/
+	//从左边开始
+	for(i = 0;i < leftMaxULen;i ++)
+	{
+		if(leftMaxUBlackHeight[i] == MIDHORIHEIGHT)//发现左边与水平中线有交点
 		{
-			  *realVerticalDevationLoc = -80;
-			  return TOOLEFT;
-		}
-		/*没有检测到右边的边界*/
-		if((LeftDirect == GETDIRECT) && (RightDirect == RIGHTLOST))
-		{
-			  *realVerticalDevationLoc = 80;
-			  return TOORIGHT;
-		}
-		/*************************以下均为有两边边界的*********************************/
+			/*根据直线位于中点的四个位置，获得的两种式子，两个式子结果互为相反数*/
 		
-		/*如果检测到了左右边界，再分一下几种情况*/
-		//首先采集一次左右边界的有效段。
-		getOneSideUsefulLine(leftBlackLoc,countLeftZero,leftMaxULineLoc,&leftMaxULen,leftMaxUBlackHeight);
-		getOneSideUsefulLine(rightBlackLoc,countRightZero,rightMaxULineLoc,&rightMaxULen,rightMaxUBlackHeight);
-		//那么现在leftMaxULineLoc leftMaxULen 和 rightMaxULineLoc  rightMaxULen中已经可以使用了
-		
-		//过滤有效段太短的边界，直接返回太偏左偏右即可
-		if((leftMaxULen <= 2)){
-			  *realVerticalDevationLoc = -80;
-			  return TOOLEFT;
+			//则整个线都偏右，结果为正！
+			if((leftMaxULineLoc[leftMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
+			{
+				*realVerticalDevationLoc = (lineWidth / 2) - MIDHORLOC + leftMaxULineLoc[leftMaxUBlackHeight[i]];
+				return GETMIDLOC;
+			}
+			else  //整个线都偏左，结果为负
+			{
+				//正值的偏移量
+				*realVerticalDevationLoc = MIDHORLOC - leftMaxULineLoc[leftMaxUBlackHeight[i]] - (lineWidth / 2);
+				*realVerticalDevationLoc = 0 - *realVerticalDevationLoc;//取反以后，返回为负值，表示为左偏
+				return GETMIDLOC;
+			}
 		}
-		if((rightMaxULen <= 2)){
-			  *realVerticalDevationLoc = 80;
-			  return TOORIGHT;
-		}
-		/*获得线宽*/
-    res = getLineWidth(leftMaxULineLoc,rightMaxULineLoc,leftMaxULen,rightMaxULen,leftMaxUBlackHeight,rightMaxUBlackHeight,&lineWidth);
-		if(res == NOLINEWIDTH)//如果没有获取到线宽
+	}
+	/*再做右边*/
+	for(i = 0;i < rightMaxULen;i ++)
+	{
+		if(rightMaxUBlackHeight[i] == MIDHORIHEIGHT)//发现左边与水平中线有交点
 		{
-			  lineWidth = 0;
-			  *realVerticalDevationLoc = 0;
-			  return NOLINEWIDTH;
+			/*根据直线位于中点的四个位置，获得的两种式子，两个式子结果互为相反数*/
+			//黑线偏右
+			if((rightMaxULineLoc[rightMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
+			{
+				*realVerticalDevationLoc = rightMaxULineLoc[rightMaxUBlackHeight[i]] - MIDHORLOC - (lineWidth / 2);
+				return GETMIDLOC;
+			}
+			else
+			{
+				*realVerticalDevationLoc = (lineWidth / 2) - rightMaxULineLoc[rightMaxUBlackHeight[i]] + MIDHORLOC;
+				*realVerticalDevationLoc = 0 - *realVerticalDevationLoc;
+				return GETMIDLOC;
+			}
 		}
-		
-		/*开始使用整个屏幕中点去计算偏移，默认肯定检测到了两边*/
-		//从左边开始
-		for(i = 0;i < leftMaxULen;i ++)
-		{
-			  if(leftMaxUBlackHeight[i] == MIDHORIHEIGHT)//发现左边与水平中线有交点
-				{
-					  /*根据直线位于中点的四个位置，获得的两种式子，两个式子结果互为相反数*/
-					
-					  //则整个线都偏右，结果为正！
-					  if((leftMaxULineLoc[leftMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
-						{
-							  *realVerticalDevationLoc = (lineWidth / 2) - MIDHORLOC + leftMaxULineLoc[leftMaxUBlackHeight[i]];
-							  return GETMIDLOC;
-						}
-						else  //整个线都偏左，结果为负
-						{
-							  //正值的偏移量
-							  *realVerticalDevationLoc = MIDHORLOC - leftMaxULineLoc[leftMaxUBlackHeight[i]] - (lineWidth / 2);
-							  *realVerticalDevationLoc = 0 - *realVerticalDevationLoc;//取反以后，返回为负值，表示为左偏
-							  return GETMIDLOC;
-						}
-				}
-		}
-		/*再做右边*/
-		for(i = 0;i < rightMaxULen;i ++)
-		{
-			  if(rightMaxUBlackHeight[i] == MIDHORIHEIGHT)//发现左边与水平中线有交点
-				{
-					  /*根据直线位于中点的四个位置，获得的两种式子，两个式子结果互为相反数*/
-					
-					  //黑线偏右
-					  if((rightMaxULineLoc[rightMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
-						{
-							  *realVerticalDevationLoc = rightMaxULineLoc[rightMaxUBlackHeight[i]] - MIDHORLOC - (lineWidth / 2);
-							  return GETMIDLOC;
-						}
-						else
-						{
-							  *realVerticalDevationLoc = (lineWidth / 2) - rightMaxULineLoc[rightMaxUBlackHeight[i]] + MIDHORLOC;
-							  *realVerticalDevationLoc = 0 - *realVerticalDevationLoc;
-							  return GETMIDLOC;
-						}
-				}
-		}
-		
-		 return NOMIDLOC;
+	}
+	return NOMIDLOC;
 }

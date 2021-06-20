@@ -3,7 +3,6 @@
 
 #include "sys.h"
 
-
 #define MODIFYVAL  3 //每次调整的大小
 #define MAXGREY  0xE0//最大灰度值
 #define MINGREY  0x0F  //最小灰度值
@@ -26,7 +25,6 @@
 
 #define MIDHORLOC (((NEEDWITH) / 2) - 1)//中间水平位置中点  59
 
-
 extern void cameraRefresh(void);
 extern void changMidGrey(void);
 extern void printToUart(void);
@@ -40,4 +38,3 @@ extern int getCmdByDeviLoc(void);
 extern int getLineWidth(u8 *lMaxULine,u8 *rMaxULine,u8 lMaxULen,u8 rMaxULen,u8 *lMaxLineHei,u8 *rMaxLineHei,u8 *lineWidth);
 
 #endif
-
