@@ -10,8 +10,8 @@ extern pid_struct	line_pid;
 #endif
 
 // u8 MidGreyVal = 0x78;//可调阀值
-// u8 MidGreyVal = 0x60;//可调阀值  for wet day
-u8 MidGreyVal = 0x37;//可调阀值 for night test
+u8 MidGreyVal = 0x60;//可调阀值  for wet day
+// u8 MidGreyVal = 0x37;//可调阀值 for night test
 
 //截取出来的图片 是原图的1/8
 u8 cutImg[NEEDHEIGHT][NEEDWITH] = {0};
@@ -409,14 +409,24 @@ void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u1
 		u16 i = 0;
 	  //u16 j = 0;
 	  u16 tmpHeight = 0; 
+#if defined(FENCHA_TEST) && FENCHA_TEST
+	u8 get_fencha = 0;
+#endif
 	
 	
     /*间隔扫描几行*/	
 	  for(tmpHeight = startLine;tmpHeight < endLine;tmpHeight += skipLine)
 	  {
+#if defined(FENCHA_TEST) && FENCHA_TEST
+		get_fencha = 0;
+#endif
 			  /*一行中的检测跳变，每行中就检测一个左点，一个右点*/
 			  for(i = 0;i < NEEDWITH - 3;i ++)  //连续判断三个点，所以最后三个点舍去
 			  {
+#if defined(FENCHA_TEST) && FENCHA_TEST
+					if(cutImg[tmpHeight][i] == 0)
+						get_fencha++;
+#endif
 						/*检测到正跳变，紧接着就是相同的高电平，那么就是右边的黑色点被检测到了 i+1就是黑点的位置*/
 						if(  ((cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) <= UPJUMP) && 
 								(cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])  )
@@ -431,6 +441,12 @@ void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u1
 				}
 				//准备下一行
         rightBlackLoc ++;leftBlackLoc  ++;				
+#if defined(FENCHA_TEST) && FENCHA_TEST
+			if(get_fencha > 80){
+				// RUNNING = 0;
+				turnA();
+			}
+#endif
 		}
 }
 

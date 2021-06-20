@@ -24,6 +24,7 @@
 #define BIKING	1
 #if defined(BIKING) && BIKING
 #define SIMPLE_METHOD	1
+#define FENCHA_TEST	1
 #endif
 
 enum All

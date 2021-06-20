@@ -3,6 +3,7 @@
 
 u16	speed_min = 380;
 u16 max_add = 200;
+extern int RUNNING;
 
 void Motor_Init(void)
 {
@@ -110,6 +111,18 @@ void Motor_start(void)
 	delay_ms(10);
 	TIM_SetCompare1(TIM4,speed_min-35);   //the right monitor	PB5
 	TIM_SetCompare2(TIM4,speed_min); 	// the left monitor		PB0
+}
+
+void turnA(void)
+{
+	Motor_Forward();
+	delay_ms(400);
+	Motor_Turnright();
+	delay_ms(800);
+	Motor_Stop();
+	// delay_ms(1500);
+	// delay_ms(1500);
+	// RUNNING = 0;
 }
 
 //PWM 部分初始化 
