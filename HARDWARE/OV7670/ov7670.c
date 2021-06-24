@@ -26,13 +26,43 @@ u8 OV7670_Init(void)
 	//设置IO
 	
  	GPIO_InitTypeDef  GPIO_InitStructure;
+#if defined(CHANGE_PIN) && CHANGE_PIN
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOE|RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOF,ENABLE);
+#else
  	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA|RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOD|RCC_APB2Periph_GPIOG|RCC_APB2Periph_AFIO, ENABLE);	 //使能相关端口时钟
- 
-	/*******************************************************************/
-	
-	/*******************************************************************/
-	
-	
+#endif
+
+#if defined(CHANGE_PIN) && CHANGE_PIN
+/* PB15 for OV7670_VSYNC pin */
+	GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_15; 	//PA8 输入 上拉
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+ 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_SetBits(GPIOB,GPIO_Pin_15);
+
+/*	PE6 for PWDN pin always LOW	
+	PE4 for FIFO_RCK pin	
+	PE2 for OV7670_CS(OE) pin
+	PE3 for OV7670_WREN pin
+	PE0 for RRST
+	PE1 for WRST*/
+
+ 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6|GPIO_Pin_4|GPIO_Pin_3|GPIO_Pin_2|GPIO_Pin_1|GPIO_Pin_0;
+ 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //推挽输出
+ 	GPIO_Init(GPIOE, &GPIO_InitStructure);
+ 	GPIO_ResetBits(GPIOE,GPIO_Pin_6);
+
+/*	for RESET pin always HEIGH*/
+ 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;				 // 端口配置
+ 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //推挽输出
+ 	GPIO_Init(GPIOC, &GPIO_InitStructure);
+ 	GPIO_SetBits(GPIOC,GPIO_Pin_13);
+
+/*	PF0-PF7 for D0-D7 pins */
+	GPIO_InitStructure.GPIO_Pin  = 0xff; //PF0~7 输入 上拉
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+ 	GPIO_Init(GPIOF, &GPIO_InitStructure);
+#else
 	GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_11; 	//PA8 输入 上拉
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -44,12 +74,10 @@ u8 OV7670_Init(void)
  	GPIO_Init(GPIOB, &GPIO_InitStructure);
  	GPIO_SetBits(GPIOB,GPIO_Pin_1|GPIO_Pin_10);	
 
-	
 	GPIO_InitStructure.GPIO_Pin  = 0xff; //PC0~7 输入 上拉
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
  	GPIO_Init(GPIOA, &GPIO_InitStructure);
-	 
-	
+
 //   GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_15;  
   GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_5;  
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
@@ -67,6 +95,7 @@ u8 OV7670_Init(void)
 	// GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
  	// GPIO_Init(GPIOD, &GPIO_InitStructure);
 	// GPIO_SetBits(GPIOD,GPIO_Pin_2);
+#endif
 
  	SCCB_Init();        		//初始化SCCB 的IO口	   	  
  	if(SCCB_WR_Reg(0x12,0x80))return 1;	//复位SCCB	  

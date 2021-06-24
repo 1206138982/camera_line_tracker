@@ -138,6 +138,16 @@ u8 ov_sta;	//帧中断标记
  //外部中断5~9服务程序
 void EXTI15_10_IRQHandler(void)
 {		 		
+#if defined(CHANGE_PIN) && CHANGE_PIN
+	if(EXTI_GetITStatus(EXTI_Line15)==SET)	//是8线的中断
+	{      
+		OV7670_WRST=0;	//复位写指针		  		 
+		OV7670_WRST=1;	
+		OV7670_WREN=1;	//允许写入FIFO 	 
+		ov_sta++;		//帧中断加1 
+	}
+	EXTI_ClearITPendingBit(EXTI_Line15);  //清除EXTI8线路挂起位						  
+#else
 	if(EXTI_GetITStatus(EXTI_Line11)==SET)	//是8线的中断
 	{      
 		OV7670_WRST=0;	//复位写指针		  		 
@@ -146,6 +156,7 @@ void EXTI15_10_IRQHandler(void)
 		ov_sta++;		//帧中断加1 
 	}
 	EXTI_ClearITPendingBit(EXTI_Line11);  //清除EXTI8线路挂起位						  
+#endif
 } 
 
 
@@ -155,6 +166,21 @@ void EXTI11_Init(void)
 	EXTI_InitTypeDef EXTI_InitStructure;
 	NVIC_InitTypeDef NVIC_InitStructure;
 	
+#if defined(CHANGE_PIN) && CHANGE_PIN
+  GPIO_EXTILineConfig(GPIO_PortSourceGPIOB,GPIO_PinSource15);//PA8对中断线8
+ 	   	 
+	EXTI_InitStructure.EXTI_Line=EXTI_Line15;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;	
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);		//根据EXTI_InitStruct中指定的参数初始化外设EXTI寄存器
+	
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;			//使能按键所在的外部中断通道
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;	//抢占优先级0 
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;					//子优先级0 
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;								//使能外部中断通道
+  NVIC_Init(&NVIC_InitStructure);  	  //根据NVIC_InitStruct中指定的参数初始化外设NVIC寄存器   
+#else
   GPIO_EXTILineConfig(GPIO_PortSourceGPIOB,GPIO_PinSource11);//PA8对中断线8
  	   	 
 	EXTI_InitStructure.EXTI_Line=EXTI_Line11;
@@ -168,6 +194,7 @@ void EXTI11_Init(void)
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;					//子优先级0 
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;								//使能外部中断通道
   NVIC_Init(&NVIC_InitStructure);  	  //根据NVIC_InitStruct中指定的参数初始化外设NVIC寄存器   
+#endif
 }
 
 

@@ -63,7 +63,7 @@ int main(void)
 	LCD_ShowString(30,230,200,16,16,"OV7670 Init OK");
 	delay_ms(500);	 	   
 									
-	EXTI11_Init();		// ???
+	EXTI11_Init();		// PB15 for ov7670 VSYNC interput pin in exti.c
 	OV7670_Window_Set(12,176,240,320); 
 	OV7670_CS=0;					
 	LCD_Clear(BLACK); 
@@ -81,6 +81,10 @@ int main(void)
 #if defined(BIKING) && BIKING
 	Motor_start();
 	RUNNING = 1;
+#if defined(START_TEST) && START_TEST
+	motor_test();
+	RUNNING = 0;
+#endif
 #endif
 	while(1)
 	{

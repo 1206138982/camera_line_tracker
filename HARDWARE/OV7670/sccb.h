@@ -1,6 +1,7 @@
 #ifndef __SCCB_H
 #define __SCCB_H
 #include "sys.h"
+#include "AllHead.h"
 //////////////////////////////////////////////////////////////////////////////////	 
 //本程序参考自网友guanfu_wang代码。
 //ALIENTEK战舰STM32开发板V3
@@ -11,6 +12,13 @@
 //版本：V1.0		    							    							  
 //////////////////////////////////////////////////////////////////////////////////
   
+#if defined(CHANGE_PIN) && CHANGE_PIN
+#define SCCB_SDA_IN()  {GPIOB->CRH&=0XFFF0FFFF;GPIOB->CRH|=0X00080000;}
+#define SCCB_SDA_OUT() {GPIOB->CRH&=0XFFF0FFFF;GPIOB->CRH|=0X00030000;}
+#define SCCB_SCL    		PBout(13)	 	//SCL
+#define SCCB_SDA    		PBout(12) 		//SDA	 
+#define SCCB_READ_SDA    	PBin(12)  		//输入SDA    
+#else
 #define SCCB_SDA_IN()  {GPIOC->CRL&=0XFFFFF0FF;GPIOC->CRL|=0X00000800;}
 #define SCCB_SDA_OUT() {GPIOC->CRL&=0XFFFFF0FF;GPIOC->CRL|=0X00000300;}
 
@@ -19,6 +27,7 @@
 #define SCCB_SDA    		PCout(2) 		//SDA	 
 
 #define SCCB_READ_SDA    	PCin(2)  		//输入SDA    
+#endif
 #define SCCB_ID   			0X42  			//OV7670的ID
 
 ///////////////////////////////////////////

@@ -5,14 +5,16 @@
 int RUNNING = 0;
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 u8 step_delay = 60;
+u8 delay_str = 140;
 #else
 extern pid_struct	line_pid;
 #endif
 #endif
 
 // u8 MidGreyVal = 0x78;//可调阀值
-u8 MidGreyVal = 0x60;//可调阀值  for wet day
-// u8 MidGreyVal = 0x37;//可调阀值 for night test
+// u8 MidGreyVal = 0x60;//可调阀值  for wet day
+u8 MidGreyVal = 0x36;//可调阀值 for night test
+// u8 MidGreyVal = 0x40;//可调阀值 for A4 paper in the night test
 
 //截取出来的图片 是原图的1/8
 u8 cutImg[NEEDHEIGHT][NEEDWITH] = {0};
@@ -49,6 +51,12 @@ void cameraOperation(void)
     res = getUsefulLine();
     if(res == BOTHLOST)//完全丢失，需要做的动作
 	{
+#if defined(BIKING) && BIKING
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+#else
+		Motor_Stop();
+#endif
+#endif
 		//printf("NULL Slope\n");
 	}
 	else //其他情况都有斜率，试着计算出来
@@ -93,6 +101,12 @@ void cameraOperation(void)
 			
 	}
 	// printToUart();
+#if defined(BIKING) && BIKING
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+#else
+	// delay_ms(50);
+#endif
+#endif
 	memsetBothBlackLoc();//做完一次摄像头采集刷新操作都要清空！
 }
 
@@ -105,7 +119,9 @@ int getCmdByDeviLoc()
 	u8 speed_turn = 20;
 #else
 	int speed_change = 0;
+#if defined(DEBUG_PIN) && DEBUG_PIN
 	static u8 test_flag = 1;
+#endif
 #endif
 #endif
 	devLocRes = getLineLocCompare2MidLine(&lineDeviationLoc);	
@@ -120,6 +136,8 @@ int getCmdByDeviLoc()
 		case TOOLEFT:{
 #if defined(BIKING) && BIKING
 			Motor_Turnleft();
+			delay_ms(step_delay);
+			Motor_Stop();
 			// RUNNING = 0;
 #endif
 			printf("TOO LEFT");return TOOLEFT;
@@ -127,6 +145,8 @@ int getCmdByDeviLoc()
 		case TOORIGHT:{
 #if defined(BIKING) && BIKING
 			Motor_Turnright();
+			delay_ms(step_delay);
+			Motor_Stop();
 			// RUNNING = 0;
 #endif
 			printf("TOO RIGHT");return TOORIGHT;
@@ -153,15 +173,17 @@ int getCmdByDeviLoc()
 			}
 			else{
 				Motor_Forward();
-				delay_ms(step_delay);
+				delay_ms(delay_str);
 				Motor_Stop();
 			}
 #else
+#if defined(DEBUG_PIN) && DEBUG_PIN
 			TEST_TIMER = test_flag;
 			if(test_flag)
 				test_flag = 0;
 			else
 				test_flag = 1;
+#endif
 			// float PID_realize(pid_struct *p_pid_struct,float error);
 			speed_change = (int)PID_realize(&line_pid,lineDeviationLoc);
 			printf("speed_change:%d\r\n",speed_change);
@@ -225,11 +247,19 @@ void cameraRefresh(void)
 			{
 				//读取两个字节的数据
 				OV7670_RCK_L;
+#if defined(CHANGE_PIN) && CHANGE_PIN
+				color=GPIOF->IDR&0XFF;	//读数据，摄像头使用PC0-7作为数据输入输出，GPIOC的端口输入数据寄存器
+#else
 				color=GPIOA->IDR&0XFF;	//读数据，摄像头使用PC0-7作为数据输入输出，GPIOC的端口输入数据寄存器
+#endif
 				OV7670_RCK_H; 
 				color<<=8;  
 				OV7670_RCK_L;
+#if defined(CHANGE_PIN) && CHANGE_PIN
+				color|=GPIOF->IDR&0XFF;	//读数据，虽然用不到，但是要是不读这个送color，整个屏幕会出现闪动，所以为了调试方便，还是读一下
+#else
 				color|=GPIOA->IDR&0XFF;	//读数据，虽然用不到，但是要是不读这个送color，整个屏幕会出现闪动，所以为了调试方便，还是读一下
+#endif
 				OV7670_RCK_H; 
 				
 				//上面读取的U和V进行清空，舍弃。

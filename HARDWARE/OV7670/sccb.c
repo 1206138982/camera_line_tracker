@@ -17,6 +17,20 @@ void SCCB_Init(void)
 {			
  	GPIO_InitTypeDef  GPIO_InitStructure;
  	
+#if defined(CHANGE_PIN) && CHANGE_PIN
+ 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);	 //使能PB端口时钟
+	
+  	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;				 // 端口配置
+ 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU; 		 //输入
+ 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+ 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+ 	GPIO_SetBits(GPIOB,GPIO_Pin_12);						 // 输出高
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;				 // 端口配置
+ 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //输输出
+ 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+ 	GPIO_SetBits(GPIOB,GPIO_Pin_13);						 // 输出高
+#else
  	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);	 //使能PB端口时钟
 	
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;				 // 端口配置
@@ -29,6 +43,7 @@ void SCCB_Init(void)
  	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //输输出
  	GPIO_Init(GPIOC, &GPIO_InitStructure);
  	GPIO_SetBits(GPIOC,GPIO_Pin_0);						 // 输出高
+#endif
  
 	SCCB_SDA_OUT();	   
 }			 

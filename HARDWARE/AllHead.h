@@ -23,9 +23,12 @@
 
 #define BIKING	1
 #if defined(BIKING) && BIKING
-#define SIMPLE_METHOD	0
+#define SIMPLE_METHOD	1
 #define FENCHA_TEST	0
+#define START_TEST	0
 #endif
+#define DEBUG_PIN	0
+#define CHANGE_PIN	1   	// change in ov7670.h when switch
 
 enum All
 {
