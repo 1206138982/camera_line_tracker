@@ -8,12 +8,17 @@ u8 step_delay = 60;
 u8 delay_str = 140;
 #else
 extern pid_struct	line_pid;
+u8 turn_delay = 30;
 #endif
+#endif
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+#define MAX_LENGTH2LCD	20
+u8 str_info2lcd[MAX_LENGTH2LCD] = {0};
 #endif
 
 // u8 MidGreyVal = 0x78;//可调阀值
-// u8 MidGreyVal = 0x60;//可调阀值  for wet day
-u8 MidGreyVal = 0x36;//可调阀值 for night test
+u8 MidGreyVal = 0x60;//可调阀值  for wet day
+// u8 MidGreyVal = 0x36;//可调阀值 for night test
 // u8 MidGreyVal = 0x40;//可调阀值 for A4 paper in the night test
 
 //截取出来的图片 是原图的1/8
@@ -43,6 +48,11 @@ void cameraOperation(void)
 	u8 res = 0;
 	u8 res1 = 0;  
 	u8 res2 = 0;
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+	int i,k_x,k_y;
+	k_x = 30;
+	k_y = 190;
+#endif
 	
     cameraRefresh();//图像采集二值化以及LCD显示
 	/*紧接着分析边沿，获取左右黑点位置，最后一个参数为检测时的间隔行数*/
@@ -66,30 +76,79 @@ void cameraOperation(void)
 		if(res1 == GOTSLOPE)
 		{
 			cmdByLine = getCmdBySlope();//获取命令
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+				for(i=0;i<MAX_LENGTH2LCD;i++)
+					str_info2lcd[i] = 32;
+#endif
 			switch(cmdByLine)
 			{
-#if defined(BIKING) && BIKING
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-				case RIGHT0_30:printf("+0_30");break;
+				case RIGHT0_30:
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"+0_30",strlen("+0_30"));
+#endif
+					break;
 				case RIGHT30_45:
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"+30_45",strlen("+30_45"));
+#endif
+					break;
 				case RIGHT45_60:
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"+45_60",strlen("+45_60"));
+#endif
+					break;
 				case RIGHTMORETHAN60:
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"more than +60",strlen("more than +60"));
+#endif
+#if defined(BIKING) && BIKING
 					Motor_Turnright();
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 					delay_ms(step_delay);
+#else
+					delay_ms(turn_delay);
+#endif
 					Motor_Stop();
+#endif
 					break;
-				case LEFT0_30:printf("-0_-30");break;
+				case LEFT0_30:
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"-0_-30",strlen("-0_-30"));
+#endif
+					break;
 				case LEFT30_45:
-				case LEFT45_60:
-				case LEFTMORETHAN60:
-					Motor_Turnleft();
-					delay_ms(step_delay);
-					Motor_Stop();
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"-30_45",strlen("-30_45"));
+#endif
 					break;
-				default:printf("ERROR!");break;
+				case LEFT45_60:
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"-45_60",strlen("-45_60"));
 #endif
+					break;
+				case LEFTMORETHAN60:
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"more than -60",strlen("more than -60"));
 #endif
+#if defined(BIKING) && BIKING
+					Motor_Turnleft();
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+					delay_ms(step_delay);
+#else
+					delay_ms(turn_delay);
+#endif
+					Motor_Stop();
+#endif
+					break;
+				default:printf("ERROR!");
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					strncpy(str_info2lcd,"ERROR in k calcu",strlen("ERROR in k calcu"));
+#endif
+					break;
 			}
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+					LCD_SimpleString(k_x,k_y,str_info2lcd,MAX_LENGTH2LCD);
+#endif
 		}
 		else
 		{
@@ -114,6 +173,12 @@ void cameraOperation(void)
 int getCmdByDeviLoc()
 {
 	u8 devLocRes = 0;  
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+	u8 i,loc_x,loc_y;
+	u8 loc_str[MAX_LENGTH2LCD] = {0};
+	loc_x = 30;
+	loc_y = 160;
+#endif
 #if defined(BIKING) && BIKING
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 	u8 speed_turn = 20;
@@ -134,18 +199,38 @@ int getCmdByDeviLoc()
 			printf("Both lost");return BOTHLOST;
 		};
 		case TOOLEFT:{
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+			for(i=0;i<MAX_LENGTH2LCD;i++)
+				str_info2lcd[i] = 32;
+			strncpy(str_info2lcd,"TOO LEFT",strlen("TOO LEFT"));
+			LCD_SimpleString(loc_x,loc_y,str_info2lcd,MAX_LENGTH2LCD);
+#endif
 #if defined(BIKING) && BIKING
 			Motor_Turnleft();
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 			delay_ms(step_delay);
+#else
+			delay_ms(turn_delay);
+#endif
 			Motor_Stop();
 			// RUNNING = 0;
 #endif
 			printf("TOO LEFT");return TOOLEFT;
 		}
 		case TOORIGHT:{
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+			for(i=0;i<MAX_LENGTH2LCD;i++)
+				str_info2lcd[i] = 32;
+			strncpy(str_info2lcd,"TOO RIGHT",strlen("TOO RIGHT"));
+			LCD_SimpleString(loc_x,loc_y,str_info2lcd,MAX_LENGTH2LCD);
+#endif
 #if defined(BIKING) && BIKING
 			Motor_Turnright();
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 			delay_ms(step_delay);
+#else
+			delay_ms(turn_delay);
+#endif
 			Motor_Stop();
 			// RUNNING = 0;
 #endif
@@ -200,6 +285,13 @@ int getCmdByDeviLoc()
 			}
 #endif
 #endif
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+			for(i=0;i<MAX_LENGTH2LCD;i++)
+				str_info2lcd[i] = 32;
+			sprintf(loc_str,"lineDeviaLoc:%d",lineDeviationLoc);
+			strncpy(str_info2lcd,loc_str,strlen(loc_str));
+			LCD_SimpleString(loc_x,loc_y,str_info2lcd,MAX_LENGTH2LCD);
+#endif
 			if((lineDeviationLoc >= 0) && (lineDeviationLoc <= 10)) return RIGHTDEVI0_10;
 			if((lineDeviationLoc <= 0) && (lineDeviationLoc >= -10)) return LEFTDEVI0_10;
 			if((lineDeviationLoc > 10 ) && (lineDeviationLoc <= 20)) return RIGHTDEVI10_20;
@@ -231,7 +323,11 @@ void cameraRefresh(void)
 	if(ov_sta)//有帧中断更新？
 	{
 		LCD_Scan_Dir(DFT_SCAN_DIR);	//恢复默认扫描方向 
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+		LCD_Set_Window(50,50,120,80);//将显示区域设置到屏幕中央
+#else
 		LCD_Set_Window(100,100,120,80);//将显示区域设置到屏幕中央
+#endif
 		LCD_WriteRAM_Prepare();     //开始写入GRAM	
 		  
 		OV7670_RRST=0;				//开始复位读指针 

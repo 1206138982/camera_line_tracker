@@ -2898,39 +2898,18 @@ void LCD_ShowString(u16 x,u16 y,u16 width,u16 height,u8 size,u8 *p)
     }  
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
+void LCD_SimpleString(u16 x,u16 y,u8 *p,u8 length)
+{
+	u8 end = x+length*8;
+	LCD_Set_Window(x,y,length*8,16);//将显示区域设置到屏幕中央  max 20 bytes string
+    while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
+    {
+        if(x>=end)
+			break;
+        LCD_ShowChar(x,y,*p,16,0);
+        x += 8;
+        p++;
+    }  
+}
+#endif

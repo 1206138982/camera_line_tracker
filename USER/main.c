@@ -34,10 +34,6 @@ int main(void)
 	LED_Init();		  			//初始化与LED连接的硬件接口
 	KEY_Init();					//初始化按键
 #if defined(BIKING) && BIKING
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-#else
-	PID_init(&line_pid,3,0,0);
-#endif
 #else
 	
 	TIM3_Int_Init(TIMERUNIT,7199);//进入定时器中断，增加计数值，后续的值可以根据这个定时器做定时采集发送
@@ -81,6 +77,10 @@ int main(void)
 #if defined(BIKING) && BIKING
 	Motor_start();
 	RUNNING = 1;
+#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+#else
+	PID_init(&line_pid,1.5,0,0.5);
+#endif
 #if defined(START_TEST) && START_TEST
 	motor_test();
 	RUNNING = 0;

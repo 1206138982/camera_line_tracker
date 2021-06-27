@@ -1,7 +1,7 @@
 #include "l298n.h"
 #include "AllHead.h"
 
-// u16	speed_min = 380;
+// u16	speed_min = 380;   // the speed_min will change to 0 unexcepted because of the u16 type,when change to int,fix it
 int	speed_min = 400;
 u16 max_add = 150;
 extern int RUNNING;
