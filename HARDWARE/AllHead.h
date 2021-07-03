@@ -22,7 +22,7 @@
 #include "l298n.h"
 #include "move.h"
 
-#define BIKING	0
+#define BIKING	1
 #if defined(BIKING) && BIKING
 #define SIMPLE_METHOD	0
 #define FENCHA_TEST	0
