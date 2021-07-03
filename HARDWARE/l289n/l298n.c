@@ -1,11 +1,12 @@
 #include "l298n.h"
 #include "AllHead.h"
+#include "grey.h"
 
 // u16	speed_min = 380;   // the speed_min will change to 0 unexcepted because of the u16 type,when change to int,fix it
-int	speed_min = 400;
-u16 max_add = 150;
-extern int RUNNING;
+int	speed_min = 400;  //min:400 
+u16 max_add = 200;
 u8 monitor_error_add = 50;
+extern u8 RUNNING;
 
 void Motor_Init(void)
 {
@@ -29,6 +30,8 @@ void Motor_Stop(void)
 
 void Motor_Forward(void)
 {
+	if(RUNNING == 0)
+		return ;
 	Mr_P = 1;
 	Mr_N = 0;
 	Ml_P = 1;
@@ -37,6 +40,8 @@ void Motor_Forward(void)
 
 void Motor_Backward(void)
 {
+	if(RUNNING == 0)
+		return ;
 	Mr_P = 0;
 	Mr_N = 1;
 	Ml_P = 0;
@@ -45,6 +50,8 @@ void Motor_Backward(void)
 
 void Motor_Turnleft(void)
 {
+	if(RUNNING == 0)
+		return ;
 	Mr_P = 1;
 	Mr_N = 0;
 	Ml_P = 0;
@@ -53,6 +60,8 @@ void Motor_Turnleft(void)
 
 void Motor_Turnright(void)
 {
+	if(RUNNING == 0)
+		return ;
 	Mr_P = 0;
 	Mr_N = 0;
 	Ml_P = 1;
@@ -61,6 +70,8 @@ void Motor_Turnright(void)
 
 void left_add(int add)
 {
+	if(RUNNING == 0)
+		return ;
 	if(add < 0){
 		printf("error in left_add() add < 0\r\n");
 		return ;
@@ -68,12 +79,16 @@ void left_add(int add)
 	if(add > max_add){
 		printf("in left_add() add:%d\tbeyond the max_add:%d\r\n",add,max_add);
 		add = max_add;
+		printStopMess(3);
+		// RUNNING = 0;
 	}
 	TIM_SetCompare2(TIM3,speed_min-add);
 }
 
 void right_add(int add)
 {
+	if(RUNNING == 0)
+		return ;
 	if(add < 0){
 		printf("error in right_add() add < 0\r\n");
 		return ;
@@ -81,6 +96,8 @@ void right_add(int add)
 	if(add > max_add){
 		printf("in right_add() add:%d\tbeyond the max_add:%d\r\n",add,max_add);
 		add = max_add;
+		printStopMess(4);
+		// RUNNING = 0;
 	}
 #if defined(MONITOR_ERROR) && MONITOR_ERROR
 	TIM_SetCompare1(TIM3,speed_min-add-monitor_error_add);
@@ -109,22 +126,25 @@ void Motor_start(void)
 
 void motor_test(void)
 {
+	delay_ms(500);
+	// delay_ms(1500);
+	// return ;
+
+	left_add(100);
+	right_add(0);
 	delay_ms(1500);
 	delay_ms(1500);
 	return ;
-	Motor_Stop();
-	delay_ms(100);
 
-	speed_min = 410;
-	right_add(0);
 	left_add(0);
+	right_add(100);
 	delay_ms(1000);
-	Motor_Stop();
-	delay_ms(100);
 }
 
 void turnA(void)
 {
+	if(RUNNING == 0)
+		return ;
 	Motor_Forward();
 	delay_ms(400);
 	Motor_Turnright();

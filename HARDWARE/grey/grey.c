@@ -2,24 +2,18 @@
 
 #if defined(BIKING) && BIKING
 #include "l298n.h"
-int RUNNING = 0;
+u8 FLAG_BORDER = 0;
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-u8 step_delay = 60;
-u8 delay_str = 140;
 #else
-extern pid_struct	line_pid;
-u8 turn_delay = 30;
+extern u8 RUNNING;
 #endif
-#endif
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-#define MAX_LENGTH2LCD	20
-u8 str_info2lcd[MAX_LENGTH2LCD] = {0};
 #endif
 
 // u8 MidGreyVal = 0x78;//¿Éµ÷·§Öµ
 u8 MidGreyVal = 0x60;//¿Éµ÷·§Öµ  for wet day
-// u8 MidGreyVal = 0x36;//¿Éµ÷·§Öµ for night test
-// u8 MidGreyVal = 0x40;//¿Éµ÷·§Öµ for A4 paper in the night test
+// u8 MidGreyVal = 0x36;//¿Éµ÷·§Öµ for night test in windows
+// u8 MidGreyVal = 0x45;//¿Éµ÷·§Öµ for A4 paper in the night test
+// u8 MidGreyVal = 0x40;//¿Éµ÷·§Öµ for night test in floor
 
 //½ØÈ¡³öÀ´µÄÍ¼Æ¬ ÊÇÔ­Í¼µÄ1/8
 u8 cutImg[NEEDHEIGHT][NEEDWITH] = {0};
@@ -48,124 +42,82 @@ void cameraOperation(void)
 	u8 res = 0;
 	u8 res1 = 0;  
 	u8 res2 = 0;
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-	int i,k_x,k_y;
-	k_x = 30;
-	k_y = 190;
-#endif
-	
+	u8 test_str[20] = {0};
+	static u8 line2stop = 0;
+	static u8 slope2stop = 0;
     cameraRefresh();//Í¼Ïñ²É¼¯¶þÖµ»¯ÒÔ¼°LCDÏÔÊ¾
 	/*½ô½Ó×Å·ÖÎö±ßÑØ£¬»ñÈ¡×óÓÒºÚµãÎ»ÖÃ£¬×îºóÒ»¸ö²ÎÊýÎª¼ì²âÊ±µÄ¼ä¸ôÐÐÊý*/
 	getLineEdge(leftBlackLoc,rightBlackLoc,0,NEEDHEIGHT-1,SKIPLINE);	
-	/*»ñÈ¡×î³¤µÄÓÐÐ§¶Î£¬Ö»È¡Ò»¸öÓÐÐ§¶Î*/
+	/*»ñÈ¡×î³¤µÄÓÐÐ§¶Î£¬Ö»È¡Ò»¸öÓÐÐ§¶Î save in maxUsefulBlackLine and maxUsefulBlackHeight*/
     res = getUsefulLine();
     if(res == BOTHLOST)//ÍêÈ«¶ªÊ§£¬ÐèÒª×öµÄ¶¯×÷
 	{
+		//printf("NULL Slope\n");
+		line2stop++;
+		if(line2stop > 100){
+			printStopMess(1);
 #if defined(BIKING) && BIKING
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 #else
-		Motor_Stop();
+			RUNNING = 0;
 #endif
 #endif
-		//printf("NULL Slope\n");
+		}
 	}
 	else //ÆäËûÇé¿ö¶¼ÓÐÐ±ÂÊ£¬ÊÔ×Å¼ÆËã³öÀ´
 	{
+		line2stop = 0;
 		/*Ê¹ÓÃ×îÐ¡¶þ³Ë·¨¼ÆËã³öÐ±ÂÊ*/
-		res1 = regression(maxUsefulBlackLine,&maxUsefulLineLen,&overK,&b);
+		// res1 = regression(maxUsefulBlackLine,&maxUsefulLineLen,&overK,&b);
+		res1 = regression(maxUsefulBlackLine,maxUsefulBlackHeight,&maxUsefulLineLen,&overK,&b);
 		if(res1 == GOTSLOPE)
 		{
+			slope2stop = 0;
 			cmdByLine = getCmdBySlope();//»ñÈ¡ÃüÁî
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-				for(i=0;i<MAX_LENGTH2LCD;i++)
-					str_info2lcd[i] = 32;
-#endif
 			switch(cmdByLine)
 			{
 				case RIGHT0_30:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"+0_30",strlen("+0_30"));
-#endif
 					break;
 				case RIGHT30_45:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"+30_45",strlen("+30_45"));
-#endif
 					break;
 				case RIGHT45_60:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"+45_60",strlen("+45_60"));
-#endif
 					break;
 				case RIGHTMORETHAN60:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"more than +60",strlen("more than +60"));
-#endif
-#if defined(BIKING) && BIKING
-					Motor_Turnright();
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-					delay_ms(step_delay);
-#else
-					delay_ms(turn_delay);
-#endif
-					Motor_Stop();
-#endif
 					break;
+				
 				case LEFT0_30:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"-0_-30",strlen("-0_-30"));
-#endif
 					break;
 				case LEFT30_45:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"-30_45",strlen("-30_45"));
-#endif
 					break;
 				case LEFT45_60:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"-45_60",strlen("-45_60"));
-#endif
 					break;
 				case LEFTMORETHAN60:
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"more than -60",strlen("more than -60"));
-#endif
-#if defined(BIKING) && BIKING
-					Motor_Turnleft();
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-					delay_ms(step_delay);
-#else
-					delay_ms(turn_delay);
-#endif
-					Motor_Stop();
-#endif
 					break;
 				default:printf("ERROR!");
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					strncpy(str_info2lcd,"ERROR in k calcu",strlen("ERROR in k calcu"));
-#endif
 					break;
 			}
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-					LCD_SimpleString(k_x,k_y,str_info2lcd,MAX_LENGTH2LCD);
+			/*×¨ÃÅ×ö×óÓÒ±ß½çÆ«ÒÆ¼ì²âµÄ¹¤×÷*/
+			res2 = getCmdByDeviLoc();//¸ù¾ÝÖ±ÏßÏà¶ÔµÄÆ«ÒÆ»ñÈ¡µÄÃüÁî
+#if defined(BIKING) && BIKING
+			motation();
 #endif
+			print2lcd();
 		}
 		else
 		{
-				
-		}
-		
-		/*×¨ÃÅ×ö×óÓÒ±ß½çÆ«ÒÆ¼ì²âµÄ¹¤×÷*/
-		res2 = getCmdByDeviLoc();//¸ù¾ÝÖ±ÏßÏà¶ÔµÄÆ«ÒÆ»ñÈ¡µÄÃüÁî
-			
-	}
-	// printToUart();
+			slope2stop++;
+			if(slope2stop > 100){
+				printStopMess(2);
 #if defined(BIKING) && BIKING
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 #else
-	// delay_ms(50);
+				RUNNING = 0;
 #endif
 #endif
+			}
+		}
+	}
+	// printToUart();
 	memsetBothBlackLoc();//×öÍêÒ»´ÎÉãÏñÍ·²É¼¯Ë¢ÐÂ²Ù×÷¶¼ÒªÇå¿Õ£¡
 }
 
@@ -173,125 +125,23 @@ void cameraOperation(void)
 int getCmdByDeviLoc()
 {
 	u8 devLocRes = 0;  
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-	u8 i,loc_x,loc_y;
-	u8 loc_str[MAX_LENGTH2LCD] = {0};
-	loc_x = 30;
-	loc_y = 160;
-#endif
-#if defined(BIKING) && BIKING
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-	u8 speed_turn = 20;
-#else
-	int speed_change = 0;
-#if defined(DEBUG_PIN) && DEBUG_PIN
-	static u8 test_flag = 1;
-#endif
-#endif
-#endif
 	devLocRes = getLineLocCompare2MidLine(&lineDeviationLoc);	
 	switch(devLocRes)
 	{
 		case BOTHLOST:{
-#if defined(BIKING) && BIKING
-		// RUNNING = 0;
-#endif
 			printf("Both lost");return BOTHLOST;
-		};
+		}
 		case TOOLEFT:{
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-			for(i=0;i<MAX_LENGTH2LCD;i++)
-				str_info2lcd[i] = 32;
-			strncpy(str_info2lcd,"TOO LEFT",strlen("TOO LEFT"));
-			LCD_SimpleString(loc_x,loc_y,str_info2lcd,MAX_LENGTH2LCD);
-#endif
-#if defined(BIKING) && BIKING
-			Motor_Turnleft();
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-			delay_ms(step_delay);
-#else
-			delay_ms(turn_delay);
-#endif
-			Motor_Stop();
-			// RUNNING = 0;
-#endif
 			printf("TOO LEFT");return TOOLEFT;
 		}
 		case TOORIGHT:{
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-			for(i=0;i<MAX_LENGTH2LCD;i++)
-				str_info2lcd[i] = 32;
-			strncpy(str_info2lcd,"TOO RIGHT",strlen("TOO RIGHT"));
-			LCD_SimpleString(loc_x,loc_y,str_info2lcd,MAX_LENGTH2LCD);
-#endif
-#if defined(BIKING) && BIKING
-			Motor_Turnright();
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-			delay_ms(step_delay);
-#else
-			delay_ms(turn_delay);
-#endif
-			Motor_Stop();
-			// RUNNING = 0;
-#endif
 			printf("TOO RIGHT");return TOORIGHT;
 		}
 		case NOMIDLOC:{
-#if defined(BIKING) && BIKING
-			// RUNNING = 0;
-#endif
 			printf("NO MID LOC");return NOMIDLOC;
 		}
 		case GETMIDLOC:{
 			printf("DEV: %d \r\n",lineDeviationLoc);
-#if defined(BIKING) && BIKING
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-			if(lineDeviationLoc > speed_turn){
-				Motor_Turnright();
-				delay_ms(step_delay);
-				Motor_Stop();
-			}
-			else if(lineDeviationLoc < -speed_turn){
-				Motor_Turnleft();
-				delay_ms(step_delay);
-				Motor_Stop();
-			}
-			else{
-				Motor_Forward();
-				delay_ms(delay_str);
-				Motor_Stop();
-			}
-#else
-#if defined(DEBUG_PIN) && DEBUG_PIN
-			TEST_TIMER = test_flag;
-			if(test_flag)
-				test_flag = 0;
-			else
-				test_flag = 1;
-#endif
-			// float PID_realize(pid_struct *p_pid_struct,float error);
-			speed_change = (int)PID_realize(&line_pid,lineDeviationLoc);
-			printf("speed_change:%d\r\n",speed_change);
-			Motor_Forward();
-			if(speed_change > 0){
-				//turn right;
-				left_add(speed_change);
-				right_add(0);
-			}
-			else{
-				//turn left
-				left_add(0);
-				right_add(-speed_change);
-			}
-#endif
-#endif
-#if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
-			for(i=0;i<MAX_LENGTH2LCD;i++)
-				str_info2lcd[i] = 32;
-			sprintf(loc_str,"lineDeviaLoc:%d",lineDeviationLoc);
-			strncpy(str_info2lcd,loc_str,strlen(loc_str));
-			LCD_SimpleString(loc_x,loc_y,str_info2lcd,MAX_LENGTH2LCD);
-#endif
 			if((lineDeviationLoc >= 0) && (lineDeviationLoc <= 10)) return RIGHTDEVI0_10;
 			if((lineDeviationLoc <= 0) && (lineDeviationLoc >= -10)) return LEFTDEVI0_10;
 			if((lineDeviationLoc > 10 ) && (lineDeviationLoc <= 20)) return RIGHTDEVI10_20;
@@ -499,8 +349,6 @@ void printToUart()
 		
 }
 
-
-
 /*
 º¯Êý¹¦ÄÜ£º»ñµÃºÚÏßµÄ×óÓÒ²àºÚµãÎ»ÖÃ
 ²ÎÊý£º¹©´æ´¢ºÚÏß×óÓÒÎ»ÖÃµÄÊý×é  ¿ªÊ¼ÐÐ  ½áÊøÐÐ  ¼ä¸ôÐÐÊý
@@ -531,19 +379,31 @@ void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u1
 			if(  ((cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) <= UPJUMP) && 
 					(cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])  )
 			{*rightBlackLoc = i+1;}
+			if(i==NEEDWITH-4 && cutImg[tmpHeight][NEEDWITH-3]==0 && cutImg[tmpHeight][NEEDWITH-2]==0)
+			{
+				*rightBlackLoc = NEEDWITH-2;
+#if defined(BIKING) && BIKING
+				FLAG_BORDER = 2;
+#endif
+			}
 
 			/*¼ì²âµ½¸ºÌø±ä£¬½ô½Ó×Å¾ÍÊÇÏàÍ¬µÄµÍµçÆ½£¬ÄÇÃ´¾ÍÊÇ×ó²àµÄºÚµã±»¼ì²âµ½ÁË i+1¾ÍÊÇºÚµãµÄÎ»ÖÃ*/
 			if( (cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) >= DOWNJUMP && 
-					((cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2] ) )
-				)
+					((cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])) )
 			//´æ´¢×óºÚµãµÄÎ»ÖÃ
 			{*leftBlackLoc = i+1;}
+			if(i==0 && cutImg[tmpHeight][1]==0 && cutImg[tmpHeight][2]==0)
+			{
+				*leftBlackLoc = 1;
+#if defined(BIKING) && BIKING
+				FLAG_BORDER = 1;
+#endif
+			}
 		}
 			//×¼±¸ÏÂÒ»ÐÐ
 		rightBlackLoc ++;leftBlackLoc  ++;				
 #if defined(FENCHA_TEST) && FENCHA_TEST
 		if(get_fencha > 80){
-			// RUNNING = 0;
 			turnA();
 		}
 #endif
@@ -606,7 +466,8 @@ void getOneSideUsefulLine(u8 *needBlackLoc,u8 countZero,u8 *maxUBlackLine,u8 *ma
 		{
 			/*´æ´¢½øÁÙÊ±Êý×éÖÐ*/
 			tmpMaxUsefulLine[tmpMaxUsefulLineLen] = needBlackLoc[i];
-			tmpmaxUBlackHeight[tmpMaxUsefulLineLen] = i;//´æ´¢¸ß¶È
+			// tmpmaxUBlackHeight[tmpMaxUsefulLineLen] = i;//´æ´¢¸ß¶È
+			tmpmaxUBlackHeight[tmpMaxUsefulLineLen] = i*SKIPLINE;//´æ´¢¸ß¶È
 			tmpMaxUsefulLineLen ++;
 		}
 	}
@@ -717,9 +578,11 @@ int getLineWidth(u8 *lMaxULine,u8 *rMaxULine,u8 lMaxULen,u8 rMaxULen,u8 *lMaxLin
 	{
 		for(i = 0;i < lMaxULen;i ++)//¿ªÊ¼Æ¥ÅäÍ¬Ò»Ë®Æ½Î»ÖÃ×óÓÒ¾ù´æÔÚÓÐÐ§½»µã
 		{
-			if(rightBlackLoc[lMaxLineHei[i]] != 0)//ÔÚ×ó±ßÓÐÐ§Î»ÖÃ¸ß¶È£¬´æÔÚÓÒ±ßÓÐÐ§Ïß¶Î½»µã
+			// if(rightBlackLoc[lMaxLineHei[i]] != 0)//ÔÚ×ó±ßÓÐÐ§Î»ÖÃ¸ß¶È£¬´æÔÚÓÒ±ßÓÐÐ§Ïß¶Î½»µã
+			if(rightBlackLoc[lMaxLineHei[i]/SKIPLINE] != 0)//ÔÚ×ó±ßÓÐÐ§Î»ÖÃ¸ß¶È£¬´æÔÚÓÒ±ßÓÐÐ§Ïß¶Î½»µã
 			{
-				*lineWidth = abs(rightBlackLoc[lMaxLineHei[i]] - lMaxULine[i]);
+				// *lineWidth = abs(rightBlackLoc[lMaxLineHei[i]] - lMaxULine[i]);
+				*lineWidth = abs(rightBlackLoc[lMaxLineHei[i]/SKIPLINE] - lMaxULine[i]);
 				/*test*/
 				testLineWidth = *lineWidth;
 				return GOTLINEWIDTH;
@@ -731,8 +594,10 @@ int getLineWidth(u8 *lMaxULine,u8 *rMaxULine,u8 lMaxULen,u8 rMaxULen,u8 *lMaxLin
 		for(i = 0;i < rMaxULen;i ++)//¿ªÊ¼Æ¥ÅäÍ¬Ò»Ë®Æ½Î»ÖÃ×óÓÒ¾ù´æÔÚÓÐÐ§½»µã
 		{
 			if(leftBlackLoc[rMaxLineHei[i]] != 0)//ÔÚ×ó±ßÓÐÐ§Î»ÖÃ¸ß¶È£¬´æÔÚÓÒ±ßÓÐÐ§Ïß¶Î½»µã
+			if(leftBlackLoc[rMaxLineHei[i]/SKIPLINE] != 0)//ÔÚ×ó±ßÓÐÐ§Î»ÖÃ¸ß¶È£¬´æÔÚÓÒ±ßÓÐÐ§Ïß¶Î½»µã
 			{
-				*lineWidth = abs(leftBlackLoc[rMaxLineHei[i]] - rMaxULine[i]);
+				// *lineWidth = abs(leftBlackLoc[rMaxLineHei[i]] - rMaxULine[i]);
+				*lineWidth = abs(leftBlackLoc[rMaxLineHei[i]/SKIPLINE] - rMaxULine[i]);
 				/*test*/
 				testLineWidth = *lineWidth;
 				return GOTLINEWIDTH;
@@ -835,20 +700,24 @@ int getLineLocCompare2MidLine(int *realVerticalDevationLoc)//´«ÈëÓÃÓÚ·µ»ØµÄ±äÁ¿£
 	//´Ó×ó±ß¿ªÊ¼
 	for(i = 0;i < leftMaxULen;i ++)
 	{
-		if(leftMaxUBlackHeight[i] == MIDHORIHEIGHT)//·¢ÏÖ×ó±ßÓëË®Æ½ÖÐÏßÓÐ½»µã
+		// if(leftMaxUBlackHeight[i] == MIDHORIHEIGHT)//·¢ÏÖ×ó±ßÓëË®Æ½ÖÐÏßÓÐ½»µã
+		if(leftMaxUBlackHeight[i]/SKIPLINE == MIDHORIHEIGHT)//·¢ÏÖ×ó±ßÓëË®Æ½ÖÐÏßÓÐ½»µã
 		{
 			/*¸ù¾ÝÖ±ÏßÎ»ÓÚÖÐµãµÄËÄ¸öÎ»ÖÃ£¬»ñµÃµÄÁ½ÖÖÊ½×Ó£¬Á½¸öÊ½×Ó½á¹û»¥ÎªÏà·´Êý*/
 		
 			//ÔòÕû¸öÏß¶¼Æ«ÓÒ£¬½á¹ûÎªÕý£¡
-			if((leftMaxULineLoc[leftMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
+			// if((leftMaxULineLoc[leftMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
+			if((leftMaxULineLoc[leftMaxUBlackHeight[i]/SKIPLINE] + (lineWidth / 2)) > MIDHORLOC)
 			{
-				*realVerticalDevationLoc = (lineWidth / 2) - MIDHORLOC + leftMaxULineLoc[leftMaxUBlackHeight[i]];
+				// *realVerticalDevationLoc = (lineWidth / 2) - MIDHORLOC + leftMaxULineLoc[leftMaxUBlackHeight[i]];
+				*realVerticalDevationLoc = (lineWidth / 2) - MIDHORLOC + leftMaxULineLoc[leftMaxUBlackHeight[i]/SKIPLINE];
 				return GETMIDLOC;
 			}
 			else  //Õû¸öÏß¶¼Æ«×ó£¬½á¹ûÎª¸º
 			{
 				//ÕýÖµµÄÆ«ÒÆÁ¿
-				*realVerticalDevationLoc = MIDHORLOC - leftMaxULineLoc[leftMaxUBlackHeight[i]] - (lineWidth / 2);
+				// *realVerticalDevationLoc = MIDHORLOC - leftMaxULineLoc[leftMaxUBlackHeight[i]] - (lineWidth / 2);
+				*realVerticalDevationLoc = MIDHORLOC - leftMaxULineLoc[leftMaxUBlackHeight[i]/SKIPLINE] - (lineWidth / 2);
 				*realVerticalDevationLoc = 0 - *realVerticalDevationLoc;//È¡·´ÒÔºó£¬·µ»ØÎª¸ºÖµ£¬±íÊ¾Îª×óÆ«
 				return GETMIDLOC;
 			}
@@ -857,18 +726,22 @@ int getLineLocCompare2MidLine(int *realVerticalDevationLoc)//´«ÈëÓÃÓÚ·µ»ØµÄ±äÁ¿£
 	/*ÔÙ×öÓÒ±ß*/
 	for(i = 0;i < rightMaxULen;i ++)
 	{
-		if(rightMaxUBlackHeight[i] == MIDHORIHEIGHT)//·¢ÏÖ×ó±ßÓëË®Æ½ÖÐÏßÓÐ½»µã
+		// if(rightMaxUBlackHeight[i] == MIDHORIHEIGHT)//·¢ÏÖ×ó±ßÓëË®Æ½ÖÐÏßÓÐ½»µã
+		if(rightMaxUBlackHeight[i]/SKIPLINE == MIDHORIHEIGHT)//·¢ÏÖ×ó±ßÓëË®Æ½ÖÐÏßÓÐ½»µã
 		{
 			/*¸ù¾ÝÖ±ÏßÎ»ÓÚÖÐµãµÄËÄ¸öÎ»ÖÃ£¬»ñµÃµÄÁ½ÖÖÊ½×Ó£¬Á½¸öÊ½×Ó½á¹û»¥ÎªÏà·´Êý*/
 			//ºÚÏßÆ«ÓÒ
-			if((rightMaxULineLoc[rightMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
+			// if((rightMaxULineLoc[rightMaxUBlackHeight[i]] + (lineWidth / 2)) > MIDHORLOC)
+			if((rightMaxULineLoc[rightMaxUBlackHeight[i]/SKIPLINE] + (lineWidth / 2)) > MIDHORLOC)
 			{
-				*realVerticalDevationLoc = rightMaxULineLoc[rightMaxUBlackHeight[i]] - MIDHORLOC - (lineWidth / 2);
+				// *realVerticalDevationLoc = rightMaxULineLoc[rightMaxUBlackHeight[i]] - MIDHORLOC - (lineWidth / 2);
+				*realVerticalDevationLoc = rightMaxULineLoc[rightMaxUBlackHeight[i]/SKIPLINE] - MIDHORLOC - (lineWidth / 2);
 				return GETMIDLOC;
 			}
 			else
 			{
-				*realVerticalDevationLoc = (lineWidth / 2) - rightMaxULineLoc[rightMaxUBlackHeight[i]] + MIDHORLOC;
+				// *realVerticalDevationLoc = (lineWidth / 2) - rightMaxULineLoc[rightMaxUBlackHeight[i]] + MIDHORLOC;
+				*realVerticalDevationLoc = (lineWidth / 2) - rightMaxULineLoc[rightMaxUBlackHeight[i]/SKIPLINE] + MIDHORLOC;
 				*realVerticalDevationLoc = 0 - *realVerticalDevationLoc;
 				return GETMIDLOC;
 			}
