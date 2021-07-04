@@ -80,8 +80,8 @@ int main(void)
 	RUNNING = 1;
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 #else
-	PID_init(&line_pid,1.5,0,0.1);
-	PID_init(&oK_pid,80,0,10);
+	PID_init(&line_pid,1.2,0.05,2.5);   //PID_init(&line_pid,1.2,0.03,2.5);
+	PID_init(&oK_pid,50,5,70);    //PID_init(&oK_pid,50,3,70);
 #endif
 #if defined(START_TEST) && START_TEST
 	motor_test();

@@ -3,8 +3,8 @@
 #include "grey.h"
 
 // u16	speed_min = 380;   // the speed_min will change to 0 unexcepted because of the u16 type,when change to int,fix it
-int	speed_min = 400;  //min:400 
-u16 max_add = 200;
+int	speed_min = 380;  //min:400 
+u16 max_add = 150;
 u8 monitor_error_add = 50;
 extern u8 RUNNING;
 
@@ -65,6 +65,26 @@ void Motor_Turnright(void)
 	Mr_P = 0;
 	Mr_N = 0;
 	Ml_P = 1;
+	Ml_N = 0;
+}
+
+void Motor_Leftback(void)
+{
+	if(RUNNING == 0)
+		return ;
+	Mr_P = 0;
+	Mr_N = 0;
+	Ml_P = 0;
+	Ml_N = 1;
+}
+
+void Motor_Rightback(void)
+{
+	if(RUNNING == 0)
+		return ;
+	Mr_P = 0;
+	Mr_N = 1;
+	Ml_P = 0;
 	Ml_N = 0;
 }
 

@@ -24,9 +24,13 @@
 
 #define BIKING	1
 #if defined(BIKING) && BIKING
-#define SIMPLE_METHOD	0
-#define FENCHA_TEST	0
+#define SIMPLE_METHOD	1
+#define FENCHA_TEST	1
 #define START_TEST	0
+#endif
+
+#if defined(FENCHA_TEST) && FENCHA_TEST
+#define MAP_TESTB		0
 #endif
 
 #define DEBUG_PIN	0

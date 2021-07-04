@@ -2,18 +2,19 @@
 
 #if defined(BIKING) && BIKING
 #include "l298n.h"
-u8 FLAG_BORDER = 0;
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-#else
 extern u8 RUNNING;
 #endif
+#if defined(FENCHA_TEST) && FENCHA_TEST
+extern u8 fencha_times;
+u8 max_black_fencha = 80;
 #endif
 
 // u8 MidGreyVal = 0x78;//可调阀值
-u8 MidGreyVal = 0x60;//可调阀值  for wet day
+// u8 MidGreyVal = 0x60;//可调阀值  for wet day
 // u8 MidGreyVal = 0x36;//可调阀值 for night test in windows
 // u8 MidGreyVal = 0x45;//可调阀值 for A4 paper in the night test
 // u8 MidGreyVal = 0x40;//可调阀值 for night test in floor
+u8 MidGreyVal = 0x58;//可调阀值 for day test in floor
 
 //截取出来的图片 是原图的1/8
 u8 cutImg[NEEDHEIGHT][NEEDWITH] = {0};
@@ -33,6 +34,7 @@ extern int b;
 extern int cmdByLine;
 /*检测到的直线相对于中线位置的偏移*/
 int  lineDeviationLoc;
+u8 FLAG_BORDER = 0;
 
 /*
 函数功能，统一调用图像采集到数据处理的函数
@@ -47,7 +49,10 @@ void cameraOperation(void)
 	static u8 slope2stop = 0;
     cameraRefresh();//图像采集二值化以及LCD显示
 	/*紧接着分析边沿，获取左右黑点位置，最后一个参数为检测时的间隔行数*/
-	getLineEdge(leftBlackLoc,rightBlackLoc,0,NEEDHEIGHT-1,SKIPLINE);	
+	getLineEdge(leftBlackLoc,rightBlackLoc,0,NEEDHEIGHT-1,SKIPLINE);
+#if defined(MAP_TESTB) && MAP_TESTB	
+	find_fencha_move();
+#endif
 	/*获取最长的有效段，只取一个有效段 save in maxUsefulBlackLine and maxUsefulBlackHeight*/
     res = getUsefulLine();
     if(res == BOTHLOST)//完全丢失，需要做的动作
@@ -111,7 +116,7 @@ void cameraOperation(void)
 #if defined(BIKING) && BIKING
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
 #else
-				RUNNING = 0;
+				// RUNNING = 0;
 #endif
 #endif
 			}
@@ -359,53 +364,76 @@ void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u1
 	//u16 j = 0;
 	u16 tmpHeight = 0; 
 #if defined(FENCHA_TEST) && FENCHA_TEST
+#if defined(MAP_TESTB) && MAP_TESTB	
+#else
 	u8 get_fencha = 0;
+	u8 fencha_start = 0;
 #endif
+#endif
+	FLAG_BORDER = 0;
 	
     /*间隔扫描几行*/	
 	for(tmpHeight = startLine;tmpHeight < endLine;tmpHeight += skipLine)
 	{
 #if defined(FENCHA_TEST) && FENCHA_TEST
+#if defined(MAP_TESTB) && MAP_TESTB	
+#else
 		get_fencha = 0;
+#endif
 #endif
 		/*一行中的检测跳变，每行中就检测一个左点，一个右点*/
 		for(i = 0;i < NEEDWITH - 3;i ++)  //连续判断三个点，所以最后三个点舍去
 		{
 #if defined(FENCHA_TEST) && FENCHA_TEST
-			if(cutImg[tmpHeight][i] == 0)
+#if defined(MAP_TESTB) && MAP_TESTB	
+#else
+			if(cutImg[tmpHeight][i] == 0){
+				if(get_fencha == 0)
+					fencha_start = i;
 				get_fencha++;
+			}
 #endif
-				/*检测到正跳变，紧接着就是相同的高电平，那么就是右边的黑色点被检测到了 i+1就是黑点的位置*/
-			if(  ((cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) <= UPJUMP) && 
-					(cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])  )
-			{*rightBlackLoc = i+1;}
+#endif
 			if(i==NEEDWITH-4 && cutImg[tmpHeight][NEEDWITH-3]==0 && cutImg[tmpHeight][NEEDWITH-2]==0)
 			{
 				*rightBlackLoc = NEEDWITH-2;
-#if defined(BIKING) && BIKING
 				FLAG_BORDER = 2;
-#endif
 			}
+				/*检测到正跳变，紧接着就是相同的高电平，那么就是右边的黑色点被检测到了 i+1就是黑点的位置*/
+			else if(  ((cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) <= UPJUMP) && 
+					(cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])  )
+			{*rightBlackLoc = i+1;}
 
-			/*检测到负跳变，紧接着就是相同的低电平，那么就是左侧的黑点被检测到了 i+1就是黑点的位置*/
-			if( (cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) >= DOWNJUMP && 
-					((cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])) )
-			//存储左黑点的位置
-			{*leftBlackLoc = i+1;}
 			if(i==0 && cutImg[tmpHeight][1]==0 && cutImg[tmpHeight][2]==0)
 			{
 				*leftBlackLoc = 1;
-#if defined(BIKING) && BIKING
 				FLAG_BORDER = 1;
-#endif
 			}
+			/*检测到负跳变，紧接着就是相同的低电平，那么就是左侧的黑点被检测到了 i+1就是黑点的位置*/
+			else if( (cutImg[tmpHeight][i] - cutImg[tmpHeight][i+1] ) >= DOWNJUMP && 
+					((cutImg[tmpHeight][i+1] == cutImg[tmpHeight][i+2])) )
+			//存储左黑点的位置
+			{*leftBlackLoc = i+1;}
 		}
 			//准备下一行
 		rightBlackLoc ++;leftBlackLoc  ++;				
 #if defined(FENCHA_TEST) && FENCHA_TEST
-		if(get_fencha > 80){
-			turnA();
+#if defined(MAP_TESTB) && MAP_TESTB	
+#else
+		if(get_fencha > max_black_fencha){
+			fencha_times++;
+			if(fencha_times < 5){
+				move_for_fencha(fencha_times);
+				if(fencha_times == 5)
+					RUNNING = 0;
+				if(fencha_start <= 20)
+					printStopMess(5);
+				else
+					printStopMess(6);
+				break;
+			}
 		}
+#endif
 #endif
 	}
 }
@@ -540,16 +568,26 @@ int getUsefulLine()
 		return BOTHLOST;
 	}
 	
-/*左右边界检测开始*/
-/*如果左边边界检测到了，那么才检测这个数组*/
-	if(LeftDirect == GETDIRECT)
-	{
-		getOneSideUsefulLine(leftBlackLoc,countLeftZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+	if(LeftDirect==GETDIRECT && RightDirect==GETDIRECT && FLAG_BORDER!=0){
+		if(FLAG_BORDER == 1){
+			getOneSideUsefulLine(rightBlackLoc,countRightZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+		}
+		else if(FLAG_BORDER == 2){
+			getOneSideUsefulLine(leftBlackLoc,countLeftZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+		}
 	}
-	/*如果右边边界检测到了，那么才开始检测数组*/
-	if(RightDirect == GETDIRECT)
-	{
-		getOneSideUsefulLine(rightBlackLoc,countRightZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+	else{
+		/*左右边界检测开始*/
+		/*如果左边边界检测到了，那么才检测这个数组*/
+		if(LeftDirect == GETDIRECT)
+		{
+			getOneSideUsefulLine(leftBlackLoc,countLeftZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+		}
+		/*如果右边边界检测到了，那么才开始检测数组*/
+		if(RightDirect == GETDIRECT)
+		{
+			getOneSideUsefulLine(rightBlackLoc,countRightZero,maxUsefulBlackLine,&maxUsefulLineLen,maxUsefulBlackHeight);
+		}
 	}
 	
 	/*要是只有一个或者根本就没有获取到最长段数据，那么这次的采集就是失败的，返回失败的信号*/

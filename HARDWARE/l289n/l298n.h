@@ -37,5 +37,7 @@ void left_add(int add);
 void right_add(int add);
 void Motor_start(void);
 void motor_test(void);
+void Motor_Leftback(void);
+void Motor_Rightback(void);
 
 #endif
