@@ -14,10 +14,10 @@
 // #define M2_P PAout(6)
 // #define M2_N PAout(7)
 
-//the right monitor
+//the right motor
 #define Mr_P PGout(4)
 #define Mr_N PGout(5)
-//the left monitor
+//the left motor
 #define Ml_P PGout(6)
 #define Ml_N PGout(7)
 
