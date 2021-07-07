@@ -4,7 +4,7 @@
 
 // u16	speed_min = 380;   // the speed_min will change to 0 unexcepted because of the u16 type,when change to int,fix it
 int	speed_min = 380;  //min:400 
-u16 max_add = 150;
+u16 max_add = 230;   //200 can finish the wandao in pid method
 u8 monitor_error_add = 50;
 extern u8 RUNNING;
 
@@ -150,15 +150,14 @@ void motor_test(void)
 	// delay_ms(1500);
 	// return ;
 
-	left_add(100);
-	right_add(0);
-	delay_ms(1500);
-	delay_ms(1500);
-	return ;
+	// left_add(200);
+	// right_add(0);
+	// delay_ms(1500);
+	// return ;
 
 	left_add(0);
-	right_add(100);
-	delay_ms(1000);
+	right_add(200);
+	delay_ms(1500);
 }
 
 void turnA(void)
@@ -173,97 +172,6 @@ void turnA(void)
 	// delay_ms(1500);
 	// delay_ms(1500);
 	// RUNNING = 0;
-}
-
-//https://blog.csdn.net/qq_36958104/article/details/83661117
-void monitor_PWM_Init(u16 arr,u16 psc)
-{
-    GPIO_InitTypeDef     GPIO_InitStrue;
-    TIM_OCInitTypeDef     TIM_OCInitStrue;
-    TIM_TimeBaseInitTypeDef     TIM_TimeBaseInitStrue;
-    
-    
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);        //使能TIM3和相关GPIO时钟
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,ENABLE);// 使能GPIOB时钟(LED在BP5引脚),使能AFIO时钟(定时器3通道2需要重映射到BP5引脚)
-
-#if defined(TIM3_PartialRemap) && TIM3_PartialRemap
-    GPIO_PinRemapConfig(GPIO_PartialRemap_TIM3,ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB,ENABLE);
-    
-    GPIO_InitStrue.GPIO_Pin=GPIO_Pin_5;     // TIM_CH2
-    GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;    // 复用推挽
-    GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    GPIO_Init(GPIOB,&GPIO_InitStrue);                //GPIO端口初始化设置
-
-    GPIO_InitStrue.GPIO_Pin=GPIO_Pin_4;     // TIM3_CH1
-    GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;    // 复用推挽
-    GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    GPIO_Init(GPIOB,&GPIO_InitStrue);                //GPIO端口初始化设置
-	
-// 如果PB0被初始化，则lcd不能正常显示，在LCD_Init()中有用到PB0，所以TIM3_CH2无法使用
-    // GPIO_InitStrue.GPIO_Pin=GPIO_Pin_0;     // TIM3_CH2
-    // GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;    // 复用推挽
-    // GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    // GPIO_Init(GPIOB,&GPIO_InitStrue);                //GPIO端口初始化设置
-#endif
-
-#if defined(TIM3_FullRemap) && TIM3_FullRemap    
-    GPIO_PinRemapConfig(GPIO_FullRemap_TIM3,ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC,ENABLE);
-
-    GPIO_InitStrue.GPIO_Pin=GPIO_Pin_6;     // TIM3_CH1
-    GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;    // 复用推挽
-    GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    GPIO_Init(GPIOC,&GPIO_InitStrue);                //GPIO端口初始化设置
-	
-    GPIO_InitStrue.GPIO_Pin=GPIO_Pin_7;     // TIM3_CH2
-    GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;    // 复用推挽
-    GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    GPIO_Init(GPIOC,&GPIO_InitStrue);                //GPIO端口初始化设置
-#endif
-
-#if defined(TIM4_Remap) && TIM4_Remap    
-    GPIO_PinRemapConfig(GPIO_Remap_TIM4,ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD,ENABLE);
-
-    GPIO_InitStrue.GPIO_Pin=GPIO_Pin_12;     // TIM4_CH1
-    GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;    // 复用推挽
-    GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    GPIO_Init(GPIOD,&GPIO_InitStrue);                //GPIO端口初始化设置
-	
-    GPIO_InitStrue.GPIO_Pin=GPIO_Pin_13;     // TIM4_CH2
-    GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;    // 复用推挽
-    GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    GPIO_Init(GPIOD,&GPIO_InitStrue);                //GPIO端口初始化设置
-#endif
-
-#if defined(DEBUG_PIN) && DEBUG_PIN
-    GPIO_InitStrue.GPIO_Pin=GPIO_Pin_9;     // for test
-    GPIO_InitStrue.GPIO_Mode=GPIO_Mode_Out_PP;    // 复用推挽
-    GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;    //设置最大输出速度
-    GPIO_Init(GPIOC,&GPIO_InitStrue);                //GPIO端口初始化设置
-	TEST_TIMER = 0;
-#endif
-    
-    TIM_TimeBaseInitStrue.TIM_Period=arr;    //设置自动重装载值
-    TIM_TimeBaseInitStrue.TIM_Prescaler=psc;        //预分频系数
-    TIM_TimeBaseInitStrue.TIM_CounterMode=TIM_CounterMode_Up;    //计数器向上溢出
-    TIM_TimeBaseInitStrue.TIM_ClockDivision=TIM_CKD_DIV1;        //时钟的分频因子，起到了一点点的延时作用，一般设为TIM_CKD_DIV1
-    TIM_TimeBaseInit(TIM3,&TIM_TimeBaseInitStrue);        //TIM3初始化设置(设置PWM的周期)
-    
-    TIM_OCInitStrue.TIM_OCMode=TIM_OCMode_PWM2;        // PWM模式2:CNT>CCR时输出有效
-    TIM_OCInitStrue.TIM_OCPolarity=TIM_OCPolarity_High;// 设置极性-有效为高电平
-    TIM_OCInitStrue.TIM_OutputState=TIM_OutputState_Enable;// 输出使能
-	TIM_OC1Init(TIM3,&TIM_OCInitStrue);			// TIM3_CH1    PC6
-    TIM_OC2Init(TIM3,&TIM_OCInitStrue);        // TIM3_CH2    PC7
-	//TIM3的通道2PWM 模式设置	PB5	 CH2	the right monitor
-	// TIM_OC3Init(TIM3,&TIM_OCInitStrue);        //TIM3的通道3PWM 模式设置   PB0  CH3 the left monitor
- 
-    TIM_OC1PreloadConfig(TIM3,TIM_OCPreload_Enable);        //使能预装载寄存器
-    TIM_OC2PreloadConfig(TIM3,TIM_OCPreload_Enable);        //使能预装载寄存器
-	// TIM_OC3PreloadConfig(TIM3,TIM_OCPreload_Enable);        //使能预装载寄存器
-    
-    TIM_Cmd(TIM3,ENABLE);        //使能TIM3
 }
 
 //PWM 部分初始化 

@@ -32,7 +32,6 @@ void Motor_Forward(void);
 void Motor_Backward(void);
 void Motor_Turnleft(void);
 void Motor_Turnright(void);
-void monitor_PWM_Init(u16 arr,u16 psc);
 void left_add(int add);
 void right_add(int add);
 void Motor_start(void);

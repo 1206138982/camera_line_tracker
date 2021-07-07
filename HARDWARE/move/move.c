@@ -6,24 +6,31 @@ extern int b;
 extern int  lineDeviationLoc;
 extern u8 leftBlackLoc[(NEEDHEIGHT)/(SKIPLINE)];
 extern u8 rightBlackLoc[(NEEDHEIGHT)/(SKIPLINE)];
+extern u8 devLocRes;
+
 #if defined(BIKING) && BIKING
 extern u8 RUNNING;
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-#else
+#if defined(PID_METHOD) && PID_METHOD
 extern pid_struct	line_pid;
 extern pid_struct	oK_pid;
 extern u8 FLAG_BORDER;
 int speed_change = 0;
 #endif
 #endif
+
 #if defined(FENCHA_TEST) && FENCHA_TEST
-u8 fencha_times = 0;
-u8 fencha_number = 0;
 extern u8 max_black_fencha;
+#if defined(MAP_TESTA) && MAP_TESTA
+u8 fencha_times = 0;
+#endif
+#if defined(MAP_TESTB) && MAP_TESTB
+u8 fencha_number = 0;
+#endif
 #endif
 
 void print2lcd(void)
 {
+#if defined(LCD_ON_OFF) && LCD_ON_OFF
     u8 str_info2lcd[MAX_LENGTH2LCD] = {0};
     u8 temp_str[MAX_LENGTH2LCD] = {0};
 	int i,k_x,k_y;
@@ -32,8 +39,37 @@ void print2lcd(void)
 	k_y = 160;
     for(i=0;i<MAX_LENGTH2LCD;i++)
         str_info2lcd[i] = 32;
-    sprintf(temp_str,"lineDeviaLoc:%d",lineDeviationLoc);
-    strncpy(str_info2lcd,temp_str,strlen(temp_str));
+    switch (devLocRes)
+    {
+        case BOTHLOST:{
+            strncpy(str_info2lcd,"Both lost",strlen("Both lost"));
+			break;
+		}
+		case TOOLEFT:{
+            strncpy(str_info2lcd,"TOO LEFT",strlen("TOO LEFT"));
+			break;
+		}
+		case TOORIGHT:{
+            strncpy(str_info2lcd,"TOO RIGHT",strlen("TOO RIGHT"));
+			break;
+		}
+		case NOMIDLOC:{
+            sprintf(temp_str,"nomid,Loc:%d",lineDeviationLoc);
+            strncpy(str_info2lcd,temp_str,strlen(temp_str));
+			break;
+		}
+		case NOLINEWIDTH:{
+            strncpy(str_info2lcd,"NO LINE WIDTH",strlen("NO LINE WIDTH"));
+			break;
+		}
+		case GETMIDLOC:{
+            sprintf(temp_str,"lineDeviaLoc:%d",lineDeviationLoc);
+            strncpy(str_info2lcd,temp_str,strlen(temp_str));
+            break;
+        default:
+            break;
+        }
+    }
     LCD_SimpleString(k_x,k_y,str_info2lcd,MAX_LENGTH2LCD);
 
 	k_x = 30;
@@ -44,9 +80,7 @@ void print2lcd(void)
     strncpy(str_info2lcd,temp_str,strlen(temp_str));
 	LCD_SimpleString(k_x,k_y,str_info2lcd,MAX_LENGTH2LCD);
 
-#if defined(BIKING) && BIKING
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-#else
+#if defined(PID_METHOD) && PID_METHOD
 	k_x = 30;
 	k_y = 220;
     for(i=0;i<MAX_LENGTH2LCD;i++)
@@ -70,8 +104,9 @@ void print2lcd(void)
     8:right fencha new
     9:for test
 */
-void printStopMess(u8 reason)
+void printStopMess(int reason)
 {
+#if defined(LCD_ON_OFF) && LCD_ON_OFF
     u8 str_info2lcd[MAX_LENGTH2LCD] = {0};
     u8 temp_str[MAX_LENGTH2LCD] = {0};
 	int i,k_x,k_y;
@@ -83,12 +118,44 @@ void printStopMess(u8 reason)
     sprintf(temp_str,"stop bike,reason:%d",reason);
     strncpy(str_info2lcd,temp_str,strlen(temp_str));
 	LCD_SimpleString(k_x,k_y,str_info2lcd,MAX_LENGTH2LCD);
+#endif
 }
 
-#if defined(BIKING) && BIKING
 void motation(void)
 {
 #if defined(SIMPLE_METHOD) && SIMPLE_METHOD
+#if defined(SIMPLE_METHODNEW) && SIMPLE_METHODNEW
+    u8 str_delaynew = 90;
+    int turn_delay = 0;
+    turn_delay = (int)(30*overK) + (int)(1*lineDeviationLoc);
+    printStopMess(turn_delay);
+    if(turn_delay > 80){
+        turn_delay = 80;
+        // RUNNING = 0;
+    }
+    if(turn_delay < -80){
+        turn_delay = -80;
+        // RUNNING = 0;
+    }
+    if(turn_delay<32 && turn_delay>-32){
+        Motor_Forward();
+        delay_ms(str_delaynew);
+        Motor_Stop();
+    }
+    else{
+        if(turn_delay > 0){
+            Motor_Turnright();
+            delay_ms(turn_delay);
+            Motor_Stop();
+        }
+        else{
+            Motor_Turnleft();
+            delay_ms(-turn_delay);
+            // delay_ms(30);
+            Motor_Stop();
+        }
+    }
+#else
     u8 loc2turn,turn_step_delay,str_delay;
     float oK2turn;
     loc2turn = 18;  //default 20
@@ -122,15 +189,17 @@ void motation(void)
             Motor_Stop();
         }
     }
-#else
+#endif
+#endif
+#if defined(PID_METHOD) && PID_METHOD
     int speed_line = 0;
     int speed_oK = 0;
-    if(overK>1 && FLAG_BORDER==2){
-        lineDeviationLoc = 60;
-    }
-    if(overK<-1 && FLAG_BORDER==1){
-        lineDeviationLoc = -60;
-    }
+    // if(overK>1 && FLAG_BORDER==2){
+    //     lineDeviationLoc = 60;
+    // }
+    // if(overK<-1 && FLAG_BORDER==1){
+    //     lineDeviationLoc = -60;
+    // }
     // if(abs(lineDeviationLoc) > 50){
     //     RUNNING = 0;
     //     printStopMess(0);
@@ -161,29 +230,8 @@ void motation(void)
     }
 #endif
 }
-#endif
 
-#if defined(BIKING) && BIKING
-void move_around(void)
-{
-    int i;
-    for(i=(NEEDHEIGHT)/(SKIPLINE)-1;i>(NEEDHEIGHT)/(SKIPLINE)-5;i--){
-        if(((rightBlackLoc[i]-leftBlackLoc[i])-(rightBlackLoc[i-1]-leftBlackLoc[i-1])) > 20){
-            if(abs(rightBlackLoc[i]-rightBlackLoc[i+1]) > 15){
-                // turn2R();
-                printStopMess(8);
-            }
-            else if(abs(leftBlackLoc[i]-leftBlackLoc[i+1]) > 15){
-                // turn2L();
-                printStopMess(7);
-            }
-            RUNNING = 0;
-            break;
-        }
-    }
-}
-#endif
-
+#if defined(MAP_TESTA) && MAP_TESTA
 void move_for_fencha(u8 times)
 {
     switch(times){
@@ -206,6 +254,7 @@ void move_for_fencha(u8 times)
             break;
     }
 }
+#endif
 
 void turn2L(void)
 {
@@ -238,6 +287,7 @@ void forward_ten(u16 ms_forward)
     Motor_Stop();
 }
 
+#if defined(MAP_TESTB) && MAP_TESTB	
 void find_fencha_move(void)
 {
     int i,flag_fencha;
@@ -257,6 +307,26 @@ void find_fencha_move(void)
     if(fencha_number == 2)
         RUNNING = 0;
 }
+#endif
+
+// void move_around(void)
+// {
+//     int i;
+//     for(i=(NEEDHEIGHT)/(SKIPLINE)-1;i>(NEEDHEIGHT)/(SKIPLINE)-5;i--){
+//         if(((rightBlackLoc[i]-leftBlackLoc[i])-(rightBlackLoc[i-1]-leftBlackLoc[i-1])) > 20){
+//             if(abs(rightBlackLoc[i]-rightBlackLoc[i+1]) > 15){
+//                 // turn2R();
+//                 printStopMess(8);
+//             }
+//             else if(abs(leftBlackLoc[i]-leftBlackLoc[i+1]) > 15){
+//                 // turn2L();
+//                 printStopMess(7);
+//             }
+//             RUNNING = 0;
+//             break;
+//         }
+//     }
+// }
 
 // #if defined(DEBUG_PIN) && DEBUG_PIN
 // 	static u8 test_flag = 1;

@@ -4,17 +4,20 @@
 #include "l298n.h"
 extern u8 RUNNING;
 #endif
+
 #if defined(FENCHA_TEST) && FENCHA_TEST
-extern u8 fencha_times;
 u8 max_black_fencha = 80;
+#if defined(MAP_TESTA) && MAP_TESTA
+extern u8 fencha_times;
+#endif
 #endif
 
 // u8 MidGreyVal = 0x78;//¿Éµ÷·§Öµ
-// u8 MidGreyVal = 0x60;//¿Éµ÷·§Öµ  for wet day
-// u8 MidGreyVal = 0x36;//¿Éµ÷·§Öµ for night test in windows
+// u8 MidGreyVal = 0x60;//¿Éµ÷·§Öµ  for wet day in windows
+u8 MidGreyVal = 0x36;//¿Éµ÷·§Öµ for night test in windows
+// u8 MidGreyVal = 0x48;//¿Éµ÷·§Öµ for night test in floor  fail!!
+// u8 MidGreyVal = 0x58;//¿Éµ÷·§Öµ for day test in floor
 // u8 MidGreyVal = 0x45;//¿Éµ÷·§Öµ for A4 paper in the night test
-// u8 MidGreyVal = 0x40;//¿Éµ÷·§Öµ for night test in floor
-u8 MidGreyVal = 0x58;//¿Éµ÷·§Öµ for day test in floor
 
 //½ØÈ¡³öÀ´µÄÍ¼Æ¬ ÊÇÔ­Í¼µÄ1/8
 u8 cutImg[NEEDHEIGHT][NEEDWITH] = {0};
@@ -26,15 +29,17 @@ u8 maxUsefulBlackLine[(NEEDHEIGHT)/(SKIPLINE)] = {0};
 u8 maxUsefulLineLen = 0;
 //´æ´¢×î³¤ÓĞĞ§¶ÎµÄ¸ß¶ÈÎ»ÖÃ
 u8 maxUsefulBlackHeight[(NEEDHEIGHT)/(SKIPLINE)] = {0};
+/*ÓÉÖ±ÏßÑ­¼£·¢³öµÄÈ«¾ÖÃüÁî*/
+int cmdByLine = ERR;	//the slope value get from getCmdBySlope()
 extern u8 ov_sta;	//ÔÚexit.cÀï Ãæ¶¨Òå
 extern u8 ov_frame;	//ÔÚtimer.cÀïÃæ¶¨Òå		
 /*ÄâºÏÒÔºóµÄĞ±ÂÊ*/
 extern double overK;
 extern int b;
-extern int cmdByLine;
 /*¼ì²âµ½µÄÖ±ÏßÏà¶ÔÓÚÖĞÏßÎ»ÖÃµÄÆ«ÒÆ*/
 int  lineDeviationLoc;
 u8 FLAG_BORDER = 0;
+u8 devLocRes = 0;
 
 /*
 º¯Êı¹¦ÄÜ£¬Í³Ò»µ÷ÓÃÍ¼Ïñ²É¼¯µ½Êı¾İ´¦ÀíµÄº¯Êı
@@ -60,12 +65,9 @@ void cameraOperation(void)
 		//printf("NULL Slope\n");
 		line2stop++;
 		if(line2stop > 100){
-			printStopMess(1);
+			// printStopMess(1);
 #if defined(BIKING) && BIKING
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-#else
 			RUNNING = 0;
-#endif
 #endif
 		}
 	}
@@ -114,10 +116,7 @@ void cameraOperation(void)
 			if(slope2stop > 100){
 				printStopMess(2);
 #if defined(BIKING) && BIKING
-#if defined(SIMPLE_METHOD) && SIMPLE_METHOD
-#else
-				// RUNNING = 0;
-#endif
+				RUNNING = 0;
 #endif
 			}
 		}
@@ -129,21 +128,24 @@ void cameraOperation(void)
 /*×¨ÃÅ¸ù¾İÖ±ÏßµÄË®Æ½Î»ÖÃÆ«ÒÆÌá¹©µÄ½Ó¿Ú£¬·µ»ØÖµ¾ÍÊÇÃüÁî*/
 int getCmdByDeviLoc()
 {
-	u8 devLocRes = 0;  
+	// u8 devLocRes = 0;  
 	devLocRes = getLineLocCompare2MidLine(&lineDeviationLoc);	
 	switch(devLocRes)
 	{
 		case BOTHLOST:{
-			printf("Both lost");return BOTHLOST;
+			printf("Both lost\r\n");return BOTHLOST;
 		}
 		case TOOLEFT:{
-			printf("TOO LEFT");return TOOLEFT;
+			printf("TOO LEFT\r\n");return TOOLEFT;
 		}
 		case TOORIGHT:{
-			printf("TOO RIGHT");return TOORIGHT;
+			printf("TOO RIGHT\r\n");return TOORIGHT;
 		}
 		case NOMIDLOC:{
-			printf("NO MID LOC");return NOMIDLOC;
+			printf("NO MID LOC\r\n");return NOMIDLOC;
+		}
+		case NOLINEWIDTH:{
+			printf("NO LINE WIDTH\r\n");return NOLINEWIDTH;
 		}
 		case GETMIDLOC:{
 			printf("DEV: %d \r\n",lineDeviationLoc);
@@ -177,6 +179,7 @@ void cameraRefresh(void)
 	u32 m = 0;u32 n = 0;u32 mm = 0;u32 nn = 0;u16 color;
 	if(ov_sta)//ÓĞÖ¡ÖĞ¶Ï¸üĞÂ£¿
 	{
+#if defined(LCD_ON_OFF) && LCD_ON_OFF
 		LCD_Scan_Dir(DFT_SCAN_DIR);	//»Ö¸´Ä¬ÈÏÉ¨Ãè·½Ïò 
 #if defined(LCD_SHOW_INFO) && LCD_SHOW_INFO
 		LCD_Set_Window(50,50,120,80);//½«ÏÔÊ¾ÇøÓòÉèÖÃµ½ÆÁÄ»ÖĞÑë
@@ -184,6 +187,7 @@ void cameraRefresh(void)
 		LCD_Set_Window(100,100,120,80);//½«ÏÔÊ¾ÇøÓòÉèÖÃµ½ÆÁÄ»ÖĞÑë
 #endif
 		LCD_WriteRAM_Prepare();     //¿ªÊ¼Ğ´ÈëGRAM	
+#endif
 		  
 		OV7670_RRST=0;				//¿ªÊ¼¸´Î»¶ÁÖ¸Õë 
 		OV7670_RCK_L;
@@ -244,6 +248,7 @@ void cameraRefresh(void)
 		ÄÇÃ´LCDÉÏÏÔÊ¾ÕıÏòµÄÍ¼Æ¬£¬¾ÍËµÃ÷ÎÒÉÏÃæµÄÊı×éµÄ·­×ª×öµÄÊÇÕıÈ·µÄ¡£
 		½ÓÏÂÀ´¶ÔÍ¼ÏñµÄ½âÎö£¬Ö±½Ó¿ÉÒÔÊ¹ÓÃÕâ¸öÊı×éÖĞµÄ²ÎÊı£¬Ä¬ÈÏÍ¼Æ¬¾ÍÊÇ´Ó×óÍùÓÒ£¬´ÓÉÏÍùÏÂ
 		*/
+#if defined(LCD_ON_OFF) && LCD_ON_OFF
 		for(mm = 0;mm < 80;mm ++)  //80ĞĞ
 		{
 			for(nn = 0;nn < 120;nn ++)  //120ÁĞ
@@ -260,6 +265,7 @@ void cameraRefresh(void)
 				}
 			}
 		}
+#endif
 	 }
 }	   
 
@@ -363,36 +369,27 @@ void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u1
 	u16 i = 0;
 	//u16 j = 0;
 	u16 tmpHeight = 0; 
-#if defined(FENCHA_TEST) && FENCHA_TEST
-#if defined(MAP_TESTB) && MAP_TESTB	
-#else
+#if defined(MAP_TESTA) && MAP_TESTA
 	u8 get_fencha = 0;
 	u8 fencha_start = 0;
-#endif
 #endif
 	FLAG_BORDER = 0;
 	
     /*¼ä¸ôÉ¨Ãè¼¸ĞĞ*/	
 	for(tmpHeight = startLine;tmpHeight < endLine;tmpHeight += skipLine)
 	{
-#if defined(FENCHA_TEST) && FENCHA_TEST
-#if defined(MAP_TESTB) && MAP_TESTB	
-#else
+#if defined(MAP_TESTA) && MAP_TESTA
 		get_fencha = 0;
-#endif
 #endif
 		/*Ò»ĞĞÖĞµÄ¼ì²âÌø±ä£¬Ã¿ĞĞÖĞ¾Í¼ì²âÒ»¸ö×óµã£¬Ò»¸öÓÒµã*/
 		for(i = 0;i < NEEDWITH - 3;i ++)  //Á¬ĞøÅĞ¶ÏÈı¸öµã£¬ËùÒÔ×îºóÈı¸öµãÉáÈ¥
 		{
-#if defined(FENCHA_TEST) && FENCHA_TEST
-#if defined(MAP_TESTB) && MAP_TESTB	
-#else
+#if defined(MAP_TESTA) && MAP_TESTA
 			if(cutImg[tmpHeight][i] == 0){
 				if(get_fencha == 0)
 					fencha_start = i;
 				get_fencha++;
 			}
-#endif
 #endif
 			if(i==NEEDWITH-4 && cutImg[tmpHeight][NEEDWITH-3]==0 && cutImg[tmpHeight][NEEDWITH-2]==0)
 			{
@@ -417,9 +414,7 @@ void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u1
 		}
 			//×¼±¸ÏÂÒ»ĞĞ
 		rightBlackLoc ++;leftBlackLoc  ++;				
-#if defined(FENCHA_TEST) && FENCHA_TEST
-#if defined(MAP_TESTB) && MAP_TESTB	
-#else
+#if defined(MAP_TESTA) && MAP_TESTA
 		if(get_fencha > max_black_fencha){
 			fencha_times++;
 			if(fencha_times < 5){
@@ -433,7 +428,6 @@ void getLineEdge(u8 *leftBlackLoc,u8 *rightBlackLoc,u16 startLine,u16 endLine,u1
 				break;
 			}
 		}
-#endif
 #endif
 	}
 }
@@ -680,6 +674,7 @@ int getLineLocCompare2MidLine(int *realVerticalDevationLoc)//´«ÈëÓÃÓÚ·µ»ØµÄ±äÁ¿£
 	/*ÁÙÊ±±äÁ¿*/
 	u8 countLeftZero = 0;//Í³¼ÆÒ»¸ö±ß½çÖĞµÄ0µÄÎŞÓÃÊı¾İ¸öÊıµÄÁÙÊ±±äÁ¿
 	u8 countRightZero = 0;//Í³¼ÆÒ»¸ö±ß½çÖĞµÄ0µÄÎŞÓÃÊı¾İ¸öÊıµÄÁÙÊ±±äÁ¿
+	u8 left_nums,right_nums;
 	/*×ó±ßÂË³ıÊı×é¿ªÊ¼µÄ0²Ù×÷*/
 	while((countLeftZero < 20) && (leftBlackLoc[countLeftZero] == 0))
 	{ countLeftZero ++;}//ÏÂÒ»¸öÊı¾İ
@@ -785,5 +780,27 @@ int getLineLocCompare2MidLine(int *realVerticalDevationLoc)//´«ÈëÓÃÓÚ·µ»ØµÄ±äÁ¿£
 			}
 		}
 	}
+/* ×óÏÂ½Ç¡¢ÓÒÏÂ½ÇÓÅ»¯·½·¨  */
+	// left_nums = 0;
+	// right_nums = 0;
+	// getOneSideUsefulLine(leftBlackLoc,countLeftZero,leftMaxULineLoc,&leftMaxULen,leftMaxUBlackHeight);
+	// getOneSideUsefulLine(rightBlackLoc,countRightZero,rightMaxULineLoc,&rightMaxULen,rightMaxUBlackHeight);
+	// if(leftMaxUBlackHeight[leftMaxULen] < )     //the lowest point
+	// for(i=0;i<leftMaxULen;i++){
+	// 	if(leftMaxULineLoc[i] < NEEDWITH/2){
+	// 		left_nums++;
+	// 	}
+	// }
+	// for(i=0;i<rightMaxULen;i++){
+	// 	if(rightMaxULineLoc[i] > NEEDWITH/2){
+	// 		right_nums++;
+	// 	}
+	// }
+	// if(left_nums >= leftMaxULen*2/3){
+	// 	*realVerticalDevationLoc = -NEEDWITH/2;
+	// }
+	// else if(right_nums >= rightMaxULen*2/3){
+	// 	*realVerticalDevationLoc = NEEDWITH/2;
+	// }
 	return NOMIDLOC;
 }
